@@ -1,0 +1,24 @@
+{
+  "name": "mylna-hvylya",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Мильна Хвиля — swipe arcade for a children's hospital",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "test": "node --test tests/",
+    "validate": "node scripts/validate.mjs"
+  },
+  "dependencies": {
+    "@fontsource/nunito": "^5.3.0",
+    "gsap": "^3.15.0",
+    "pixi-filters": "^6.1.5",
+    "pixi.js": "^8.22.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.4",
+    "vite-plugin-pwa": "^2.0.0"
+  }
+}
