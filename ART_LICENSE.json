@@ -1,4 +1,149 @@
 {
   "note": "Every visual in the game is original vector art generated in code (src/render/art.js). No third-party images, no AI-generated images, no studio-style imitation.",
-  "art": []
+  "art": [
+    {
+      "key": "chykhunchyk",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "brudnulya",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "lypuchka",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "kashlyuk",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "chervonya",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "bilyk",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "latochka",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "orange",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "apple",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "kiwi",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "strawberry",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "broccoli",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "soap",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "vaccine",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "patch",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "towel",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "bubble",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "water",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "carrot",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "jar",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "heart",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "oxygen",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "shield",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
+      "key": "hand",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    }
+  ]
 }

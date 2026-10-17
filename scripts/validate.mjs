@@ -44,7 +44,7 @@ for (const loc of LOCS) {
 }
 
 // Ukrainian string literals in source (player-facing copy)
-for (const dir of ['src/ui', 'src/core', 'src/fx', 'src']) {
+for (const dir of ['src/ui', 'src/core', 'src/fx', 'src/render', 'src']) {
   if (!existsSync(dir)) continue;
   for (const file of await readdir(dir)) {
     if (!file.endsWith('.js')) continue;
