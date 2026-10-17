@@ -20,11 +20,13 @@ export function createSwipe({ minSpeed }) {
       pending.push({ x1: x, y1: y, x2: x, y2: y, speed: 0, active: false, tap: true });
     },
     move(x, y, t) {
-      if (!last) return;
+      if (!last) return null;
       const dt = Math.max(0.001, t - last.t);
       const speed = Math.hypot(x - last.x, y - last.y) / dt;
-      pending.push({ x1: last.x, y1: last.y, x2: x, y2: y, speed, active: speed >= minSpeed, tap: false });
+      const seg = { x1: last.x, y1: last.y, x2: x, y2: y, speed, active: speed >= minSpeed, tap: false };
+      pending.push(seg);
       last = { x, y, t };
+      return seg;
     },
     end() {
       last = null;
