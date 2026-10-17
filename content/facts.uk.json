@@ -1,0 +1,33 @@
+{
+  "note": "Усі факти мають статус draft і потребують перевірки лікарем перед розміщенням у лікарні.",
+  "facts": [
+    { "id": "fact.hands.01", "location": "hands", "text": "Мий руки з милом щонайменше 20 секунд!", "source": "CDC — Clean Hands: When and How to Wash Your Hands", "status": "draft" },
+    { "id": "fact.hands.02", "location": "hands", "text": "Мило допомагає змити мікробів з долоньок.", "source": "CDC — Show Me the Science: Why Wash Your Hands?", "status": "draft" },
+    { "id": "fact.hands.03", "location": "hands", "text": "Мий руки перед їжею і після туалету.", "source": "CDC — Clean Hands: When and How to Wash Your Hands", "status": "draft" },
+    { "id": "fact.hands.04", "location": "hands", "text": "Потри між пальчиками і нігтики — там теж ховаються мікроби!", "source": "ВООЗ — How to handwash (техніка миття рук)", "status": "draft" },
+    { "id": "fact.hands.05", "location": "hands", "text": "Витирай руки чистим рушником.", "source": "CDC — Clean Hands: When and How to Wash Your Hands", "status": "draft" },
+    { "id": "fact.hands.06", "location": "hands", "text": "Чхай у лікоть або в серветку — так мікроби не розлітаються.", "source": "CDC — Coughing and Sneezing", "status": "draft" },
+    { "id": "fact.hands.07", "location": "hands", "text": "Порахуй до двадцяти, поки миєш руки.", "source": "CDC — Clean Hands: When and How to Wash Your Hands", "status": "draft" },
+    { "id": "fact.hands.08", "location": "hands", "text": "Мікроби такі маленькі, що їх видно лише в мікроскоп.", "source": "MedlinePlus — Germs and Hygiene", "status": "draft" },
+    { "id": "fact.hands.09", "location": "hands", "text": "Погладив тваринку — помий після цього руки.", "source": "CDC — Clean Hands: When and How to Wash Your Hands", "status": "draft" },
+
+    { "id": "fact.kitchen.01", "location": "kitchen", "text": "У ківі вітаміну C більше, ніж в апельсині!", "source": "USDA FoodData Central — Kiwifruit, green, raw; Oranges, raw", "status": "draft" },
+    { "id": "fact.kitchen.02", "location": "kitchen", "text": "Апельсини та броколі багаті на вітамін C.", "source": "USDA FoodData Central — Oranges, raw; Broccoli, raw", "status": "draft" },
+    { "id": "fact.kitchen.03", "location": "kitchen", "text": "Вітамін C допомагає ранкам загоюватися.", "source": "NIH Office of Dietary Supplements — Vitamin C Fact Sheet", "status": "draft" },
+    { "id": "fact.kitchen.04", "location": "kitchen", "text": "Їж овочі й фрукти щодня — різних кольорів!", "source": "ВООЗ — Healthy diet", "status": "draft" },
+    { "id": "fact.kitchen.05", "location": "kitchen", "text": "Вода допомагає тілу працювати. Пий її частіше!", "source": "CDC — About Water and Healthier Drinks", "status": "draft" },
+    { "id": "fact.kitchen.06", "location": "kitchen", "text": "З моркви тіло робить вітамін А — він потрібен очам.", "source": "NIH Office of Dietary Supplements — Vitamin A Fact Sheet", "status": "draft" },
+    { "id": "fact.kitchen.07", "location": "kitchen", "text": "Яблуко зі шкіркою дає корисну клітковину.", "source": "USDA FoodData Central — Apples, raw, with skin", "status": "draft" },
+    { "id": "fact.kitchen.08", "location": "kitchen", "text": "Полуниця — теж джерело вітаміну C!", "source": "USDA FoodData Central — Strawberries, raw", "status": "draft" },
+    { "id": "fact.kitchen.09", "location": "kitchen", "text": "Броколі — овоч-богатир: має вітаміни C і K.", "source": "USDA FoodData Central — Broccoli, raw", "status": "draft" },
+
+    { "id": "fact.blood.01", "location": "blood", "text": "Еритроцити розносять кисень по всьому тілу.", "source": "MedlinePlus — Blood", "status": "draft" },
+    { "id": "fact.blood.02", "location": "blood", "text": "Лейкоцити допомагають тілу справлятися з мікробами.", "source": "MedlinePlus — White Blood Cell Count", "status": "draft" },
+    { "id": "fact.blood.03", "location": "blood", "text": "Тромбоцити допомагають закрити ранку.", "source": "MedlinePlus — Platelet Disorders", "status": "draft" },
+    { "id": "fact.blood.04", "location": "blood", "text": "Щеплення вчить тіло впізнавати мікробів заздалегідь.", "source": "ВООЗ — Vaccines and immunization: What is vaccination?", "status": "draft" },
+    { "id": "fact.blood.05", "location": "blood", "text": "Серце качає кров без перерви, навіть коли ти спиш.", "source": "MedlinePlus — How the Heart Works (NHLBI)", "status": "draft" },
+    { "id": "fact.blood.06", "location": "blood", "text": "Нова кров народжується всередині кісток — у кістковому мозку.", "source": "MedlinePlus — Bone Marrow Diseases", "status": "draft" },
+    { "id": "fact.blood.07", "location": "blood", "text": "Еритроцити червоні завдяки гемоглобіну.", "source": "MedlinePlus — Hemoglobin Test", "status": "draft" },
+    { "id": "fact.blood.08", "location": "blood", "text": "Лейкоцити бувають різні — ціла команда помічників!", "source": "MedlinePlus — White Blood Cell Count", "status": "draft" }
+  ]
+}
