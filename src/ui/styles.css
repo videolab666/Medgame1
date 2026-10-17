@@ -135,7 +135,7 @@ button {
 .hud { position: absolute; inset: 0; }
 .timer { position: absolute; top: calc(12px + var(--safe-top)); left: 12px; width: 64px; height: 64px; transform: rotate(-90deg); }
 .timer .track { fill: rgba(255, 255, 255, 0.7); stroke: rgba(31, 80, 99, 0.15); stroke-width: 8; }
-.timer .bar { fill: none; stroke: var(--magenta); stroke-width: 8; stroke-linecap: round; stroke-dasharray: 163.4; transition: stroke-dashoffset 0.2s linear; }
+.timer .bar { fill: none; stroke: var(--magenta); stroke-width: 8; stroke-linecap: round; stroke-dasharray: 163.4; }
 .jar { position: absolute; top: calc(8px + var(--safe-top)); right: 78px; display: flex; align-items: center; gap: 2px; }
 .jar-img { width: 64px; height: 64px; }
 .jar-n { font-weight: 900; font-size: 30px; color: var(--white); -webkit-text-stroke: 2px var(--teal); paint-order: stroke fill; }

@@ -11,12 +11,12 @@ export function applyPost(stage, tier) {
   let godray = null;
 
   if (q.bloom > 0) {
-    const bloom = new AdvancedBloomFilter({ threshold: 0.45, bloomScale: 1.15, brightness: 1, blur: 6, quality: q.bloom >= 1 ? 4 : 3 });
+    const bloom = new AdvancedBloomFilter({ threshold: 0.6, bloomScale: 1.0, brightness: 1, blur: 6, quality: q.bloom >= 1 ? 4 : 3 });
     bloom.resolution = q.bloom * Math.min(2, window.devicePixelRatio || 1);
     fx.filters = [bloom];
   }
   if (q.godray) {
-    godray = new GodrayFilter({ angle: 28, parallel: true, gain: 0.42, lacunarity: 2.6, alpha: 0.45, time: 0 });
+    godray = new GodrayFilter({ angle: 28, parallel: true, gain: 0.35, lacunarity: 2.6, alpha: 0.22, time: 0 });
     bg.filters = [godray];
   }
   return {

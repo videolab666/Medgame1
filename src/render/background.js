@@ -3,10 +3,10 @@ import { Container, Sprite, Texture } from 'pixi.js';
 import { particleFrames } from './textures.js';
 
 const THEMES = {
-  hands: { top: '#bdefff', bottom: '#effcf5', bokeh: [0xffffff, 0xc9f3ff, 0xffd6f5] },
-  kitchen: { top: '#fff0c2', bottom: '#ffe3f0', bokeh: [0xffffff, 0xfff2b0, 0xffd1e6] },
-  blood: { top: '#ffd3e6', bottom: '#fff0f6', bokeh: [0xffffff, 0xffc2d6, 0xffe6a8] },
-  calm: { top: '#cfe9ff', bottom: '#f1fbff', bokeh: [0xffffff, 0xd9f0ff, 0xe8dcff] },
+  hands: { top: '#4fcdf5', mid: '#8fe3f7', bottom: '#c9f7e6', edge: '13,110,160', bokeh: [0xffffff, 0xc9f3ff, 0xffd6f5] },
+  kitchen: { top: '#ffc94d', mid: '#ffb27a', bottom: '#ff9fc8', edge: '190,70,40', bokeh: [0xffffff, 0xfff2b0, 0xffd1e6] },
+  blood: { top: '#ff7aa8', mid: '#ff9cc0', bottom: '#ffd0e2', edge: '160,20,70', bokeh: [0xffffff, 0xffc2d6, 0xffe6a8] },
+  calm: { top: '#7cc8ff', mid: '#a9d8ff', bottom: '#dcd2ff', edge: '40,70,160', bokeh: [0xffffff, 0xd9f0ff, 0xe8dcff] },
 };
 
 function paintProps(ctx, location, w, h) {
@@ -84,10 +84,17 @@ export function createBackground(stage, location) {
     const ctx = canvas.getContext('2d');
     const g = ctx.createLinearGradient(0, 0, 0, h);
     g.addColorStop(0, theme.top);
+    g.addColorStop(0.55, theme.mid);
     g.addColorStop(1, theme.bottom);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
     paintProps(ctx, location, w, h);
+    // Soft vignette gives depth so glossy characters pop.
+    const v = ctx.createRadialGradient(w / 2, h * 0.45, Math.min(w, h) * 0.35, w / 2, h * 0.45, Math.max(w, h) * 0.75);
+    v.addColorStop(0, `rgba(${theme.edge},0)`);
+    v.addColorStop(1, `rgba(${theme.edge},0.28)`);
+    ctx.fillStyle = v;
+    ctx.fillRect(0, 0, w, h);
     const old = paint.texture;
     paint.texture = Texture.from(canvas);
     if (old && old !== Texture.EMPTY) old.destroy(true);

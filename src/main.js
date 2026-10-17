@@ -109,7 +109,7 @@ function startRound(loc, mode, { interactive = true } = {}) {
   });
   round.interactive = interactive;
   round.on('spawn', (e) => {
-    const v = createEntityView(e, art[e.type]);
+    const v = createEntityView(e, art[e.type], art.bubble.body);
     stage.layers.entities.addChild(v.container);
     v.update(e, 0);
     views.set(e.id, v);
@@ -255,7 +255,7 @@ canvas.addEventListener('pointerdown', (ev) => {
   canvas.setPointerCapture?.(ev.pointerId);
   const p = toWorld(ev);
   swipe.begin(p.x, p.y, now());
-  trail.push(p.x, p.y, scene === 'calm');
+  trail.push(p.x, p.y, scene === 'calm', true);
 });
 canvas.addEventListener('pointermove', (ev) => {
   if (!canPlay() || !swipe.down) return;
@@ -325,4 +325,7 @@ goTitle();
 // Dev-only handle for in-browser checks (stripped from production builds).
 if (import.meta.env.DEV) {
   window.__game = { get round() { return round; }, get scene() { return scene; }, progress, stage, gsap, get post() { return post; } };
+  if (new URLSearchParams(window.location.search).has('harness')) {
+    import('./dev/harness.js').then((m) => m.installHarness(window.__game));
+  }
 }

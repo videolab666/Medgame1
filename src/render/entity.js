@@ -6,7 +6,7 @@ import { haloTexture } from './textures.js';
 
 const BONUS_TINT = { soap: 0xff9ad5, vaccine: 0x7df3e1, patch: 0xffd27a };
 
-export function createEntityView(e, art) {
+export function createEntityView(e, art, bubbleTex = null) {
   const container = new Container();
   const inner = new Container();
   container.addChild(inner);
@@ -36,6 +36,15 @@ export function createEntityView(e, art) {
     inner.addChild(eyes);
   }
 
+  // Calm mode: microbes float up already inside a soap bubble.
+  let bubble = null;
+  if (e.float && bubbleTex) {
+    bubble = new Sprite(bubbleTex);
+    bubble.anchor.set(0.5);
+    bubble.width = bubble.height = size * 1.25;
+    container.addChild(bubble);
+  }
+
   const faced = e.kind === 'microbe' || e.kind === 'cell';
   const eyesBaseY = eyes ? eyes.scale.y : 1;
   let blinkIn = 1.5 + Math.random() * 3;
@@ -50,6 +59,7 @@ export function createEntityView(e, art) {
     inner,
     body,
     eyes,
+    hasBubble: !!bubble,
     update(ent, dt) {
       container.position.set(ent.x, ent.y);
       const t = ent.age * 6 + ent.phase;

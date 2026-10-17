@@ -33,12 +33,14 @@ export function createEffects({ stage, art, particles, synth, flash, hud }) {
     view.surprise();
     const c = view.container;
     fx.addChild(c);
-    const bubble = new Sprite(art.bubble.body);
-    bubble.anchor.set(0.5);
-    const full = 250 / bubble.texture.width;
-    bubble.scale.set(0.01);
-    c.addChild(bubble);
-    T(gsap.to(bubble.scale, { x: full, y: full, duration: 0.25, ease: 'back.out(3)' }));
+    if (!view.hasBubble) {
+      const bubble = new Sprite(art.bubble.body);
+      bubble.anchor.set(0.5);
+      const full = 250 / bubble.texture.width;
+      bubble.scale.set(0.01);
+      c.addChild(bubble);
+      T(gsap.to(bubble.scale, { x: full, y: full, duration: 0.25, ease: 'back.out(3)' }));
+    }
     particles.emit('sparkle', e.x, e.y, { count: 8 });
     if (info.byBonus) synth.sparkle();
     else synth.note(info.combo);
@@ -133,7 +135,8 @@ export function createEffects({ stage, art, particles, synth, flash, hud }) {
     if (!flash.tryFlash()) return;
     const g = new Graphics().rect(0, 0, stage.width, stage.height).fill(0xffffff);
     g.alpha = alpha;
-    fx.addChild(g);
+    // HUD layer has no bloom, so the flash stays a gentle tint.
+    stage.layers.hud.addChild(g);
     T(gsap.to(g, { alpha: 0, duration: 0.45, ease: 'sine.out', onComplete: () => g.destroy() }));
   }
 
@@ -142,10 +145,10 @@ export function createEffects({ stage, art, particles, synth, flash, hud }) {
     const grad = new FillGradient({
       type: 'linear', start: { x: 0, y: 0 }, end: { x: 0, y: 1 },
       colorStops: [
-        { offset: 0, color: 'rgba(255,255,255,0)' },
-        { offset: 0.45, color: 'rgba(201,243,255,0.85)' },
-        { offset: 0.6, color: 'rgba(255,214,245,0.9)' },
-        { offset: 1, color: 'rgba(255,255,255,0)' },
+        { offset: 0, color: 'rgba(120,220,255,0)' },
+        { offset: 0.4, color: 'rgba(120,220,255,0.35)' },
+        { offset: 0.55, color: 'rgba(255,170,230,0.4)' },
+        { offset: 1, color: 'rgba(120,220,255,0)' },
       ],
       textureSpace: 'local',
     });

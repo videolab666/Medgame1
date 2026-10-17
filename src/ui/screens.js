@@ -23,6 +23,7 @@ export function createUI(root, { progress }) {
   let screen = null;
   let hud = null;
   let calmTl = null;
+  let comboEl = null;
 
   function mount(html, cls) {
     unmountScreen();
@@ -130,7 +131,13 @@ export function createUI(root, { progress }) {
     },
 
     comboPopup(n) {
+      // One popup at a time: a new combo replaces the previous one.
+      if (comboEl) {
+        gsap.killTweensOf(comboEl);
+        comboEl.remove();
+      }
       const el = document.createElement('div');
+      comboEl = el;
       el.className = 'combo';
       el.innerHTML = `<b>×${n}</b><span>${COMBO_WORDS[n] ?? 'Ура!'}</span>`;
       root.append(el);
