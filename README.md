@@ -28,7 +28,13 @@ Dev-only параметри URL: `?quality=high|mid|low` — примусова 
 
 ## Публікація
 
-Push у `main` → GitHub Actions запускає тести й валідатори, збирає PWA і публікує на GitHub Pages. У налаштуваннях репозиторію: **Settings → Pages → Source: GitHub Actions**.
+```sh
+npm run deploy     # tests + validate + build, then pushes dist/ to the gh-pages branch
+```
+
+GitHub Pages: **Settings → Pages → Source: Deploy from a branch → `gh-pages` / `(root)`**. Push у `main` лише перевіряє код (workflow `Test and build`); сайт оновлюється після `npm run deploy`.
+
+Інший хостинг: `npm run build` і скопіювати вміст `dist/` (або вміст гілки `gh-pages`) у будь-яку папку сайту — шляхи відносні. Потрібен HTTPS (інакше не працює офлайн-режим); `sw.js` та `index.html` не кешувати надовго.
 
 Після першого відкриття гра працює офлайн (service worker). Для лікарні — QR-код на URL сторінки.
 

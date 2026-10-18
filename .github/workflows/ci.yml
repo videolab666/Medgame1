@@ -1,0 +1,29 @@
+name: Test and build
+
+# Publishing goes through the gh-pages branch (npm run deploy), so this
+# workflow only checks every push: tests, content validators, production build.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Core logic tests
+        run: npm test
+      - name: Facts, banned words, art and audio licenses
+        run: npm run validate
+      - name: Build PWA
+        run: npm run build
