@@ -1,12 +1,13 @@
 // Turns round events into juice: bubbles that carry microbes away, fruit
-// halves with juice, giggling cells, bonus waves and domes. Soft and festive —
-// no explosions, no shake (spec R1); full-screen flashes go through flashGuard.
+// halves with juice, surprised cells, bonus waves and domes, and the microbe
+// king's slow-motion burst. Soft and festive — no explosions, no shake
+// (spec R1); full-screen flashes go through flashGuard.
 import { Container, FillGradient, Graphics, Sprite, Text } from 'pixi.js';
 import gsap from 'gsap';
 import { haloTexture } from '../render/textures.js';
 import { CONFIG, gravityFor } from '../core/config.js';
 
-const GIGGLES = ['лоскотно!', 'хі-хі!', 'ой, свої!', 'я свій!'];
+const GIGGLES = ['ой!', 'ох!', 'обережно!', 'стривай!'];
 
 export function createEffects({ stage, art, particles, synth, flash, hud, haptic = () => {} }) {
   // Own container: clearing it never touches particles or the finger trail.
@@ -121,17 +122,25 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
 
   function cellTouched(e, view) {
     T(gsap.fromTo(view.inner.scale, { x: 1.25, y: 0.8 }, { x: 1, y: 1, duration: 0.5, ease: 'elastic.out(1.2, 0.4)' }));
+    view.surprise();
     particles.emit('hearts', e.x, e.y - 40);
     synth.giggle();
+    floatLabel(GIGGLES[Math.floor(Math.random() * GIGGLES.length)], e.x, e.y - 110);
+    // The round stops here (like a classic bomb); a soap wave tucks it away.
+    softFlash(0.15);
+    soapWave();
+  }
+
+  function floatLabel(text, x, y, { color = 0xdd2590, size = 52 } = {}) {
     const label = new Text({
-      text: GIGGLES[Math.floor(Math.random() * GIGGLES.length)],
+      text,
       style: {
-        fontFamily: 'Nunito, sans-serif', fontWeight: '900', fontSize: 52, fill: 0xffffff,
-        stroke: { color: 0xdd2590, width: 10, join: 'round' },
+        fontFamily: 'Nunito, sans-serif', fontWeight: '900', fontSize: size, fill: 0xffffff,
+        stroke: { color, width: 10, join: 'round' },
       },
     });
     label.anchor.set(0.5);
-    label.position.set(e.x, e.y - 110);
+    label.position.set(x, y);
     labels.push(label);
     while (labels.length > 2) {
       const old = labels.shift();
@@ -231,6 +240,72 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
     T(gsap.to(t, { alpha: 0, duration: 0.5, onComplete: () => t.destroy() }));
   }
 
+  // ── the microbe king ──
+  // A quiet dark veil while he is around (the wave queue waits and time is
+  // slowed by the round), then a chunky, cheerful burst.
+  let dim = null;
+
+  function showKingDim() {
+    if (dim) return;
+    dim = new Graphics().rect(0, 0, stage.width, stage.height).fill(0x1b2340);
+    dim.alpha = 0;
+    // HUD layer: full-screen and outside the camera, like the gentle flash.
+    stage.layers.hud.addChild(dim);
+    T(gsap.to(dim, { alpha: 0.3, duration: 0.45 }));
+  }
+
+  function hideKingDim() {
+    if (!dim) return;
+    const d = dim;
+    dim = null;
+    T(gsap.to(d, { alpha: 0, duration: 0.7, ease: 'sine.out', onComplete: () => d.destroy() }));
+  }
+
+  function kingSlice(e, info) {
+    particles.emit('juice', e.x, e.y, { color: art.korol.juice ?? 0x8fd14f, count: 10, angle: Math.random() * Math.PI });
+    particles.emit('sparkle', e.x, e.y, { count: 6, color: 0xffe066 });
+    synth.note(info.hits);
+    haptic(5);
+  }
+
+  function kingBurst(e, view) {
+    const a = art.korol;
+    const size = 200 * (e.r / 75);
+    if (view) {
+      const baseRot = view.inner.rotation;
+      view.destroy();
+      const angle = Math.random() * Math.PI;
+      for (const side of [-1, 1]) {
+        const half = new Container();
+        half.position.set(e.x, e.y);
+        half.rotation = angle;
+        const skin = new Sprite(a.body);
+        skin.anchor.set(0.5);
+        skin.width = skin.height = size;
+        skin.rotation = baseRot - angle;
+        const mask = new Graphics().rect(-size, side < 0 ? -size : 0, size * 2, size).fill(0xffffff);
+        skin.mask = mask;
+        const face = new Graphics()
+          .ellipse(0, 0, size * 0.36, 10)
+          .fill({ color: a.flesh ?? '#d6f5a8' })
+          .ellipse(0, 0, size * 0.36, 10)
+          .stroke({ width: 3, color: 0xffffff, alpha: 0.7 });
+        half.addChild(skin, mask, face);
+        fx.addChild(half);
+        const n = { x: -Math.sin(angle) * side, y: Math.cos(angle) * side };
+        flying.push({ node: half, vx: n.x * 520, vy: n.y * 520 - 420, spin: side * (3 + Math.random() * 2), age: 0 });
+      }
+    }
+    particles.emit('juice', e.x, e.y, { color: a.juice ?? 0x8fd14f, count: 40, angle: 0 });
+    particles.emit('confetti', e.x, e.y, { count: 30 });
+    particles.emit('sparkle', e.x, e.y, { count: 26, spread: 260 });
+    particles.emit('bubblePop', e.x, e.y, { count: 16 });
+    softFlash(0.22);
+    haptic([12, 40, 12, 40, 12]);
+    synth.wave();
+    synth.sparkle();
+  }
+
   return {
     // views: Map(entityId -> view); effects take ownership of captured/sliced views.
     attach(round, views) {
@@ -250,6 +325,38 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
       round.on('cellTouched', (e) => {
         const v = views.get(e.id);
         if (v) cellTouched(e, v);
+      });
+      // King events: he arrives with a veil, every cut drips and chimes, and
+      // his five seconds end in a chunky burst (then the veil lifts).
+      round.on('kingSpawn', (e) => {
+        showKingDim();
+        floatLabel(art.korol.name, e.x, e.y - 150, { color: 0x2e8b57, size: 44 });
+        particles.emit('sparkle', e.x, e.y, { count: 20, spread: 240, color: 0xffe066 });
+        haptic([8, 40, 8]);
+      });
+      round.on('kingSlice', (e, info) => kingSlice(e, info));
+      round.on('kingBlast', (e) => {
+        hideKingDim();
+        kingBurst(e, take(e));
+      });
+      round.on('cellDefused', (e) => {
+        particles.emit('sparkle', e.x, e.y, { count: 8, color: 0xc8f7a0 });
+        particles.emit('hearts', e.x, e.y - 30, { count: 2 });
+        synth.sparkle();
+      });
+      round.on('cellPop', (e) => {
+        particles.emit('bubblePop', e.x, e.y);
+        synth.pop();
+      });
+      round.on('miss', (e) => {
+        synth.drop();
+        haptic(12);
+        particles.emit('sparkle', Math.max(60, Math.min(stage.width - 60, e.x)), Math.min(e.y, stage.height - 80), { count: 5, color: 0xb9c7d6 });
+      });
+      round.on('life', () => {
+        particles.emit('hearts', stage.width * 0.18, 120);
+        particles.emit('sparkle', stage.width * 0.18, 120, { count: 12, color: 0xff9ad5 });
+        synth.sparkle();
       });
       round.on('combo', (n) => {
         hud.comboPopup(n);
@@ -275,6 +382,7 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
         if (type === 'slow') hideSlowTint();
       });
       round.on('end', () => {
+        hideKingDim();
         particles.emit('starRain', stage.width);
         synth.sparkle();
       });
@@ -284,7 +392,8 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
       for (let i = flying.length - 1; i >= 0; i--) {
         const f = flying[i];
         f.age += dt;
-        f.vy += gravityFor(stage.height) * 0.8 * dt;
+        // Halves fall faster than whole objects (12 vs 9.5 in the reference).
+        f.vy += gravityFor(stage.height) * (12 / 9.5) * dt;
         f.node.x += f.vx * dt;
         f.node.y += f.vy * dt;
         f.node.rotation += f.spin * dt;
@@ -306,6 +415,8 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
       dome = null;
       if (tint) tint.destroy();
       tint = null;
+      if (dim) dim.destroy();
+      dim = null;
       fx.removeChildren().forEach((c) => c.destroy({ children: true }));
     },
   };

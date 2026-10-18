@@ -30,24 +30,28 @@ test('deterministic by seed', () => {
   assert.deepEqual(run().map((e) => e.type), run().map((e) => e.type));
 });
 
-test('opening: one, one, then 2–3 thrown together, with 5 s rests', () => {
+test('opening: one, one, then 2–3 thrown together; 1 s lead-in + 5 s rest', () => {
   const w = waves(run({}, 20));
   assert.equal(w[0].length, 1);
   assert.equal(w[1].length, 1);
   assert.ok(w[2].length >= 2 && w[2].length <= 3, `third wave ${w[2].length}`);
   assert.ok(w[2].every((e) => e.born === w[2][0].born), 'third wave is thrown together');
-  assert.ok(Math.abs(w[1][0].born - w[0][0].born - 5) < 0.05, `rest ${w[1][0].born - w[0][0].born}`);
+  assert.ok(Math.abs(w[1][0].born - w[0][0].born - 6) < 0.05, `rest ${w[1][0].born - w[0][0].born}`);
 });
 
-test('fifth wave flies in slow motion', () => {
+test('fifth stage is the slow lesson: only forbidden characters', () => {
   const w = waves(run({}, 30));
+  assert.ok(w[4].length >= 1 && w[4].length <= 2, `stage 5 has ${w[4].length}`);
+  assert.ok(w[4].every((e) => e.kind === 'cell'), w[4].map((e) => e.kind).join(','));
   assert.ok(w[4].every((e) => e.ts === 0.75), w[4].map((e) => e.ts).join(','));
+  assert.ok(w[4].every((e) => e.born === w[4][0].born), 'thrown together');
 });
 
-test('opening waves have no friendly characters or bonuses', () => {
+test('the first four stages only throw sliceables (no characters, no bonuses early)', () => {
   for (let seed = 1; seed < 20; seed++) {
-    const w = waves(run({ location: 'blood' }, 12, seed));
-    for (const e of [...w[0], ...w[1]]) assert.ok(e.kind === 'microbe' || e.kind === 'fruit', `${seed}: ${e.kind}`);
+    const w = waves(run({ location: 'blood' }, 20, seed));
+    for (const e of [...w[0], ...w[1], ...w[2], ...w[3]]) assert.notEqual(e.kind, 'cell', `seed ${seed}: character early`);
+    for (const e of [...w[0], ...w[1]]) assert.ok(e.kind === 'microbe' || e.kind === 'fruit', `seed ${seed}: ${e.kind}`);
   }
 });
 
@@ -83,9 +87,25 @@ test('max 3 bonuses, and bonuses drift in from a side', () => {
   }
 });
 
-test('blood has more friendly cells than hands', () => {
+test('forbidden characters follow one plan for every location', () => {
+  // Characters fly on a fixed slot schedule; only the faces
+  // change between locations. Same seeds must therefore give same counts.
   const cells = (l) => [1, 2, 3].reduce((n, s) => n + run({ location: l }, 60, s).filter((e) => e.kind === 'cell').length, 0);
-  assert.ok(cells('blood') > cells('hands'));
+  assert.equal(cells('blood'), cells('hands'));
+  assert.ok(cells('blood') > 0);
+});
+
+test('sequence stages mark their forbidden character exactly', () => {
+  // 'ssc'/'sssc'/'sssssc' groups: in a string that is not thrown together the
+  // single character sits at the third, fourth or sixth throw.
+  for (let seed = 1; seed < 8; seed++) {
+    for (const w of waves(run({}, 120, seed))) {
+      const cells = w.map((e, i) => [e, i]).filter(([e]) => e.kind === 'cell');
+      if (cells.length !== 1 || w.length < 4) continue;
+      if (w[w.length - 1].born - w[0].born < 0.4) continue;
+      assert.ok([2, 3, 5].includes(cells[0][1]), `seed ${seed}: length ${w.length}, character at ${cells[0][1]}`);
+    }
+  }
 });
 
 test('calm: only floating microbes, unhurried', () => {
@@ -105,7 +125,7 @@ test('throws stay within 12° of vertical and land in 2.0–2.4 s', () => {
 });
 
 test('launched entity peaks inside the screen then falls off', () => {
-  const [e] = run({}, 1);
+  const [e] = run({}, 2);
   let minY = e.y;
   let gone = false;
   for (let i = 0; i < 600 && !gone; i++) {
@@ -129,6 +149,47 @@ test('cells never spawn next to a microbe in the same wave', () => {
   }
 });
 
+test('a rolled microbe next to a character downgrades to fruit (narrow world)', () => {
+  // On a 320-wide world there is nowhere to spread, so every sliceable rolled
+  // after a character in the same wave hits the fallback: it must become a
+  // fruit instead of crashing on a re-assigned const.
+  let mixed = 0;
+  for (let seed = 1; seed < 12; seed++) {
+    for (const w of waves(run({ width: 320, duration: 300 }, 90, seed))) {
+      const cells = [];
+      for (const e of w) {
+        if (e.kind === 'cell') cells.push(e);
+        else if (e.kind === 'microbe') {
+          assert.ok(cells.every((c) => Math.abs(c.x - e.x) >= 200),
+            `seed ${seed}: microbe at ${e.x} next to a character`);
+        } else if (e.kind === 'fruit' && cells.length && Math.abs(cells[0].x - e.x) < 200) {
+          mixed++;
+        }
+      }
+    }
+  }
+  assert.ok(mixed > 0, 'no mixed character+sliceable wave was thrown in 90 s');
+});
+
+test('the king maker launches him from a side, on his own gravity', () => {
+  const sp = createSpawner({ rng: mulberry32(5), width: 1000, height: H, location: 'hands', mode: 'play' });
+  const k = sp.king(3);
+  assert.equal(k.kind, 'king');
+  assert.equal(k.r, CONFIG.RADIUS * CONFIG.KING_SCALE);
+  assert.ok(k.x < 0 || k.x > 1000, `x ${k.x}`);
+  assert.ok(k.vy < 0 && Math.abs(k.vx) > 0);
+  // He rises about half a screen and sinks back; the fall lasts one flight.
+  let minY = k.y;
+  let gone = false;
+  for (let i = 0; i < 600 && !gone; i++) {
+    stepEntity(k, STEP, k.gravity);
+    minY = Math.min(minY, k.y);
+    gone = isOffscreen(k, H, 1000);
+  }
+  assert.ok(minY > 0 && minY < H * 0.5, `apex ${minY}`);
+  assert.ok(gone, 'king eventually leaves the screen');
+});
+
 test('each location spawns only its own pools', async () => {
   const { typesFor, LOCATION_ORDER } = await import('../src/core/config.js');
   for (const loc of LOCATION_ORDER) {
@@ -140,4 +201,93 @@ test('each location spawns only its own pools', async () => {
 test('tummy friendly character is the good bacterium', () => {
   const cells = [1, 2, 3].flatMap((s) => run({ location: 'tummy' }, 60, s)).filter((e) => e.kind === 'cell');
   assert.ok(cells.length > 0 && cells.every((e) => e.type === 'dobryk'));
+});
+
+// ── the endless trip across rounds ──
+// One run per location, cut into rounds by the timer: the slot cursor, the
+// speeds of the repeating set and the regrowing weights live in the shared
+// `run`.
+
+const step = (sp, sec) => {
+  const out = [];
+  for (let i = 0; i * STEP < sec; i++) out.push(...sp.update(i * STEP, STEP, 0));
+  return out;
+};
+
+test('a round continues the trip from the saved slot', async () => {
+  const { WAVE_PLAN } = await import('../src/core/waves.js');
+  const trip = { slot: 4, speeds: {}, weights: {} }; // the "don't touch" lesson
+  const sp = createSpawner({
+    rng: mulberry32(3), width: 1000, height: H, location: 'hands', mode: 'play', duration: 40, run: trip,
+  });
+  const born = step(sp, 5);
+  assert.ok(born.length > 0);
+  assert.ok(born.every((e) => e.kind === 'cell'), born.map((e) => e.kind).join(','));
+  assert.equal(trip.slot, Math.min(5, WAVE_PLAN.length - 1), 'cursor moved to the next slot');
+});
+
+test('the next round starts exactly where the previous one stopped', async () => {
+  const { WAVE_PLAN } = await import('../src/core/waves.js');
+  const trip = { slot: 0, speeds: {}, weights: {} };
+  const first = createSpawner({
+    rng: mulberry32(11), width: 1000, height: H, location: 'hands', mode: 'play', duration: 20, run: trip,
+  });
+  step(first, 20);
+  const saved = trip.slot;
+  assert.ok(saved >= 3, `a 20 s round consumed ${saved} slots`);
+
+  const second = createSpawner({
+    rng: mulberry32(12), width: 1000, height: H, location: 'hands', mode: 'play', duration: 40, run: trip,
+  });
+  step(second, 0.7); // just past the first wave start (0.5 s)
+  assert.equal(trip.slot, Math.min(saved + 1, WAVE_PLAN.length - 1), 'the very next slot started');
+});
+
+test('the repeating set speeds up use by use and keeps it across rounds', async () => {
+  const { WAVE_PLAN } = await import('../src/core/waves.js');
+  const trip = { slot: WAVE_PLAN.length - 1, speeds: {}, weights: {} };
+  const sp = createSpawner({
+    rng: mulberry32(21), width: 1000, height: H, location: 'hands', mode: 'play', duration: 240, run: trip,
+  });
+  const es = step(sp, 240);
+  const speeds = Object.values(trip.speeds);
+  assert.ok(speeds.length >= 1, 'the set recorded its uses');
+  assert.ok(speeds.every((v) => v > 1 && v <= 1.5), speeds.join(','));
+  assert.ok(Math.max(...es.map((e) => e.ts)) > 1.02, 'flights got faster');
+
+  const snapshot = { ...trip.speeds };
+  const next = createSpawner({
+    rng: mulberry32(22), width: 1000, height: H, location: 'hands', mode: 'play', duration: 40, run: trip,
+  });
+  step(next, 40);
+  for (const [key, v] of Object.entries(snapshot)) {
+    assert.ok(trip.speeds[key] >= v, `${key} reset from ${v} to ${trip.speeds[key]}`);
+  }
+});
+
+test('the repeating set never exceeds its speed cap', async () => {
+  const { WAVE_PLAN } = await import('../src/core/waves.js');
+  const trip = { slot: WAVE_PLAN.length - 1, speeds: {}, weights: {} };
+  const sp = createSpawner({
+    rng: mulberry32(31), width: 1000, height: H, location: 'hands', mode: 'play', duration: 1200, run: trip,
+  });
+  step(sp, 1200);
+  assert.ok(Object.values(trip.speeds).every((v) => v <= 1.5));
+  assert.equal(Math.max(...Object.values(trip.speeds)), 1.5, 'the cap is reached');
+});
+
+test('set weights live in the trip, not in the spawner', () => {
+  const trip = { slot: 5, speeds: {}, weights: {} }; // first set A slot
+  const sp = createSpawner({
+    rng: mulberry32(41), width: 1000, height: H, location: 'hands', mode: 'play', duration: 12, run: trip,
+  });
+  step(sp, 12);
+  const w = trip.weights.a;
+  assert.ok(Array.isArray(w) && w.length === 2, `weights ${JSON.stringify(trip.weights)}`);
+  assert.ok(w.includes(0), 'the just-picked option sits at zero');
+  const next = createSpawner({
+    rng: mulberry32(42), width: 1000, height: H, location: 'hands', mode: 'play', duration: 40, run: trip,
+  });
+  step(next, 0.7); // one more pick happens in the next round
+  assert.equal(trip.weights.a, w, 'the next round reuses the very same weights');
 });

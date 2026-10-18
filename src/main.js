@@ -91,6 +91,18 @@ let acc = 0;
 let pendingFinish = null;
 let lastReward = null;
 let ghost = null;
+// King camera: a little closer while he is around, plus a quick pull toward
+// every cut (0.3–0.45 of the slice offset).
+const camState = { zoom: 1, x: 0, y: 0, tx: 0, ty: 0, hold: 0 };
+function resetCamera() {
+  camState.zoom = 1;
+  camState.x = 0;
+  camState.y = 0;
+  camState.tx = 0;
+  camState.ty = 0;
+  camState.hold = 0;
+  stage.setCamera(camState);
+}
 // Location pre-selected behind the "how to play" card before the first round.
 let introLoc = null;
 const swipe = createSwipe({ minSpeed: CONFIG.SWIPE_MIN_SPEED });
@@ -99,6 +111,7 @@ function teardown() {
   effects.clear();
   particles.clear();
   trail.clear();
+  resetCamera();
   for (const v of views.values()) v.destroy();
   views.clear();
   if (background) background.destroy();
@@ -128,6 +141,9 @@ function startRound(loc, mode, { interactive = true } = {}) {
     mode,
     tutorial,
     duration,
+    // A round continues the location's endless wave trip (a classic run
+    // cut into timed pieces): cursor, speeds and weights live in the save.
+    run: mode === 'play' ? progress.runFor(loc) : null,
   });
   round.interactive = interactive;
   round.on('spawn', (e) => {
@@ -140,6 +156,14 @@ function startRound(loc, mode, { interactive = true } = {}) {
     const v = views.get(e.id);
     if (v) v.destroy();
     views.delete(e.id);
+  });
+  // Each king cut pulls the camera a little toward the cut, then it drifts
+  // back — the whole picture leans into the swipe.
+  round.on('kingSlice', (e) => {
+    const clamp = (v) => Math.max(-CONFIG.KING_CAM_PULL, Math.min(CONFIG.KING_CAM_PULL, v));
+    camState.tx = clamp(e.x - stage.width / 2) * 0.6;
+    camState.ty = clamp(e.y - stage.height / 2) * 0.6;
+    camState.hold = CONFIG.KING_CAM_MOVE;
   });
   effects.attach(round, views);
   if (mode === 'play') {
@@ -167,22 +191,36 @@ function showGhostHand() {
     .to(ghost, { alpha: 0, duration: 0.3 });
 }
 
+// A kind line under the reward title when the round ended early.
+const END_NOTE = {
+  cell: 'Зачепили клітинку — і раунд зупинився. Наступного разу вийде!',
+  lives: 'Сердечка закінчилися — відпочиньмо трошки.',
+};
+
 function finishRound(loc, summary, wasTutorial) {
   if (scene !== 'round') return;
-  const result = progress.completeRound(loc, mulberry32((Date.now() >>> 0) ^ 0x9e3779b9));
+  const result = progress.completeRound(loc, mulberry32((Date.now() >>> 0) ^ 0x9e3779b9), summary);
   const { fact, seenIds } = pickFact(facts, loc, progress.state.seenFacts[loc] ?? []);
   progress.setSeenFacts(loc, seenIds);
   if (wasTutorial) progress.markTutorialDone();
   lastReward = result;
   scene = 'reward';
-  ui.showReward({ sticker: result.sticker, fact, unlocked: result.unlocked, summary });
+  // The next round is a little longer until the cap (+5 s): the reward screen
+  // says so next to «Наступний раунд».
+  const done = progress.state.rounds[loc];
+  const plusSeconds = roundSeconds(done) - roundSeconds(done - 1);
+  ui.showReward({
+    sticker: result.sticker, fact, unlocked: result.unlocked, summary,
+    note: END_NOTE[summary.reason] ?? '',
+    round: done, loc, best: result.best, achievements: result.achievements, plusSeconds,
+  });
   if (!music.jingle('reward')) synth.fanfare();
   if (fact) playVoice(fact.id, { muted: progress.state.muted });
 }
 
 function goTitle() {
   scene = 'title';
-  currentLoc = progress.lastUnlocked();
+  currentLoc = progress.nextLocation();
   startRound(currentLoc, 'calm', { interactive: false });
   ui.showTitle();
 }
@@ -251,7 +289,11 @@ ui.on('reset', () => {
   progress.reset();
   goTitle();
 });
-ui.on('menu', goTitle);
+ui.on('menu', () => {
+  // Leaving a round (or the game) mid-way: keep the wave cursor we reached.
+  progress.persist();
+  goTitle();
+});
 ui.on('again', () => {
   if (lastReward?.rest) {
     lastReward = null;
@@ -351,10 +393,28 @@ stage.app.ticker.add((ticker) => {
         total: round.state.duration,
         vitamins: round.state.vitamins,
         score: round.state.score,
+        lives: round.state.lives,
         calm: scene === 'calm',
       });
     }
   }
+  // Camera: closer while the king is around, leaning toward each cut. The
+  // pull is clamped to the zoom margin, so the backdrop never shows a gap.
+  const kingish = !!round && (round.state.kingActive || round.state.burst > 0);
+  const zoomTarget = kingish ? CONFIG.KING_CAM_ZOOM : 1;
+  camState.zoom += (zoomTarget - camState.zoom) * Math.min(1, dt * 8);
+  if (camState.hold > 0) camState.hold -= dt;
+  else {
+    camState.tx = 0;
+    camState.ty = 0;
+  }
+  const camK = Math.min(1, dt * 9);
+  camState.x += (camState.tx - camState.x) * camK;
+  camState.y += (camState.ty - camState.y) * camK;
+  const marginX = Math.max(0, ((camState.zoom - 1) * stage.width) / 2 - 4);
+  const marginY = Math.max(0, ((camState.zoom - 1) * stage.height) / 2 - 4);
+  const bound = (v, m) => Math.max(-m, Math.min(m, v));
+  stage.setCamera({ zoom: camState.zoom, x: bound(camState.x, marginX), y: bound(camState.y, marginY) });
   if (pendingFinish && !paused) {
     pendingFinish.in -= dt;
     if (pendingFinish.in <= 0) {

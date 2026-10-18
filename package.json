@@ -10,6 +10,7 @@
     "preview": "vite preview --host",
     "test": "node --test \"tests/*.test.mjs\"",
     "validate": "node scripts/validate.mjs",
+    "waves": "node scripts/waves-table.mjs",
     "deploy": "node scripts/deploy-branch.mjs"
   },
   "dependencies": {

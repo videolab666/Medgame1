@@ -150,6 +150,41 @@ const kashlyuk = {
   eyes: () => wrap(eyePair(88, { gap: 24, r: 13, look: 0 })),
 };
 
+// The microbe king: the biggest character of the game. He flies out alone on
+// his own points mark and gives one point per cut
+// until his five seconds end and he bursts. `juice`/`flesh` colour his cut.
+const korol = {
+  name: 'Король мікробів',
+  line: 'Найбільший мікроб у світі! Його слухаються всі пустуни.',
+  eyeY: 92,
+  juice: 0x7ed957,
+  flesh: '#eaffd0',
+  body() {
+    const nubs = Array.from({ length: 11 }, (_, i) => {
+      const a = (i / 11) * Math.PI * 2 - Math.PI / 2;
+      const x = 100 + Math.cos(a) * 72;
+      const y = 106 + Math.sin(a) * 72;
+      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="16" fill="url(#g)" stroke="#3f9d2e" stroke-width="4"/>`;
+    }).join('');
+    const crown =
+      `<path d="M 60 52 L 60 22 L 78 40 L 90 14 L 100 36 L 110 14 L 122 40 L 140 22 L 140 52 Z" fill="#ffd23f" stroke="#d99b00" stroke-width="5" stroke-linejoin="round"/>` +
+      `<circle cx="100" cy="54" r="6" fill="#ff5c9a" stroke="#d99b00" stroke-width="2"/>` +
+      `<circle cx="73" cy="56" r="4.5" fill="#4fb3ff" stroke="#d99b00" stroke-width="2"/>` +
+      `<circle cx="127" cy="56" r="4.5" fill="#4fb3ff" stroke="#d99b00" stroke-width="2"/>`;
+    return wrap(
+      nubs +
+        crown +
+        `<circle cx="100" cy="106" r="66" fill="url(#g)" stroke="#3f9d2e" stroke-width="5"/>` +
+        gloss(74, 74) +
+        blush(122, 42) +
+        `<path d="M 78 118 Q 100 146 122 118 Q 100 130 78 118 Z" fill="#7a2e44" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>` +
+        `<ellipse cx="100" cy="127" rx="9" ry="5" fill="#ff8fab"/>`,
+      radial('g', '#d6ffb0', '#7ed957', '#3f9d2e') + SHINE,
+    );
+  },
+  eyes: () => wrap(eyePair(92, { gap: 25, r: 15, look: 2 })),
+};
+
 // ---------------------------------------------------------------- body cells
 
 const chervonya = {
@@ -693,7 +728,7 @@ const hand = {
 };
 
 export const ART = {
-  chykhunchyk, brudnulya, lypuchka, kashlyuk,
+  chykhunchyk, brudnulya, lypuchka, kashlyuk, korol,
   chervonya, bilyk, latochka,
   orange, apple, kiwi, strawberry, broccoli,
   soap, vaccine, patch,

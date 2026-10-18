@@ -89,3 +89,82 @@ test('all locations are open by default', async () => {
   assert.ok(LOCATION_ORDER.every((l) => p.isUnlocked(l)));
   assert.equal(p.completeRound('hands', mulberry32(1)).unlocked, null);
 });
+
+// ── round progression: «Грати» chain, records, achievements, runs ──
+
+test('nextLocation follows the chain of rounds', async () => {
+  const { LOCATION_ORDER, CONFIG } = await import('../src/core/config.js');
+  const p = createProgress(memoryStorage(), { unlockAll: false });
+  assert.equal(p.nextLocation(), 'hands');
+  for (let i = 0; i < CONFIG.UNLOCK_AFTER; i++) p.completeRound('hands', mulberry32(i));
+  assert.equal(p.nextLocation(), 'kitchen');
+  // Even when everything is unlocked, the chain walks from the first spot that
+  // still needs rounds, and ends on the last location.
+  const q = createProgress(memoryStorage());
+  assert.equal(q.nextLocation(), 'hands');
+  for (const loc of LOCATION_ORDER) {
+    for (let i = 0; i < CONFIG.UNLOCK_AFTER; i++) q.completeRound(loc, mulberry32(i));
+  }
+  assert.equal(q.nextLocation(), LOCATION_ORDER[LOCATION_ORDER.length - 1]);
+});
+
+test('records: the first score is a record, later rounds keep the best', () => {
+  const p = createProgress(memoryStorage());
+  const sum = (score, vitamins = 0) => ({
+    score, vitamins, bestCombo: 0, lives: 2, reason: 'time', sliced: score, missed: 0, kingHits: 0,
+  });
+  const a = p.completeRound('hands', mulberry32(1), sum(10, 2));
+  assert.equal(a.best.isRecord, true);
+  assert.equal(a.best.value, 12);
+  const b = p.completeRound('hands', mulberry32(2), sum(4, 1));
+  assert.equal(b.best.isRecord, false);
+  assert.equal(b.best.value, 12);
+  const c = p.completeRound('hands', mulberry32(3), sum(13));
+  assert.equal(c.best.isRecord, true);
+  assert.equal(c.best.value, 13);
+  assert.equal(p.state.best.hands, 13);
+  // A round without a summary (old callers) leaves the record alone.
+  const d = p.completeRound('hands', mulberry32(4));
+  assert.equal(d.best, null);
+  assert.equal(p.state.best.hands, 13);
+});
+
+test('achievements are earned and marked new once', () => {
+  const p = createProgress(memoryStorage());
+  const quiet = {
+    score: 1, vitamins: 0, bestCombo: 1, lives: 2, reason: 'time', sliced: 1, missed: 1, kingHits: 0,
+  };
+  assert.equal(p.completeRound('hands', mulberry32(1), quiet).achievements.length, 0);
+  const star = {
+    score: 6, vitamins: 0, bestCombo: 5, lives: 3, reason: 'time', sliced: 30, missed: 0, kingHits: 0,
+  };
+  const a = p.completeRound('hands', mulberry32(2), star);
+  assert.deepEqual(
+    a.achievements.map((x) => x.id).sort(),
+    ['combo5', 'noMiss', 'swift', 'threeHearts'],
+  );
+  assert.ok(a.achievements.every((x) => x.isNew));
+  const b = p.completeRound('hands', mulberry32(3), star);
+  assert.ok(b.achievements.every((x) => !x.isNew), 'the second time has no badge');
+  assert.equal(p.state.achievements.combo5, 2);
+});
+
+test('the wave run survives a reload, per location', () => {
+  const st = memoryStorage();
+  const p = createProgress(st);
+  const trip = p.runFor('hands');
+  trip.slot = 7;
+  trip.speeds.e0 = 1.06;
+  trip.weights.a = [0, 30];
+  p.persist();
+  const q = createProgress(st);
+  assert.deepEqual(q.runFor('hands'), { slot: 7, speeds: { e0: 1.06 }, weights: { a: [0, 30] } });
+  assert.deepEqual(q.runFor('kitchen'), { slot: 0, speeds: {}, weights: {} });
+  // Old saves without runs/best/achievements still load.
+  const old = memoryStorage();
+  old.save({ version: 1, rounds: { hands: 2 }, stickers: {}, sinceRest: 0, muted: false, seenFacts: {}, tutorialDone: true });
+  const r = createProgress(old);
+  assert.equal(r.runFor('hands').slot, 0);
+  assert.equal(r.state.best.hands, 0);
+  assert.deepEqual(r.state.achievements, {});
+});

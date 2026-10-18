@@ -1,8 +1,38 @@
 // Balance constants. World width is fixed at 1000 units; height follows the
 // screen aspect ratio. Origin is top-left, y points down.
+//
+// Lives and the microbe king follow the classic arcade rules; the numbers
+// come from our research notes (kept outside the repo).
 export const CONFIG = Object.freeze({
   WORLD_W: 1000,
   ROUND_SEC: 60,
+  // Lives: three hearts, one lost per dropped
+  // microbe or fruit, one regained at the first 100 points and every 100 after.
+  MAX_LIVES: 3,
+  // Hearts and "touching a friendly character ends the round early" (always
+  // with the reward screen — spec R6). Set false for a round that only ends
+  // on time: characters then just giggle and break the combo.
+  GAME_OVER: true,
+  LIFE_FIRST_AT: 100,
+  LIFE_STEP: 100,
+  // Microbe king: appears at 50 points, then every 100;
+  // lives 5 s (expiryTime), slices count every 0.077 s at most
+  // (minSliceInterval), time slows to 35 % while he is on screen, and his
+  // burst ramps time from 5.3 % back to 100 % over 1.2 s (explosionDtCurve).
+  KING_AFTER: 50,
+  KING_EVERY: 100,
+  KING_SEC: 5,
+  KING_SLICE_MIN: 0.077,
+  KING_SLOW: 0.35,
+  KING_BURST_SEC: 1.2,
+  KING_BURST_MIN: 0.053,
+  // King size (scale 1.35) and camera: zoom-in, quick pull
+  // toward each slice (0.3–0.45 of the slice offset, radius cap ≈ 90
+  // world units; the main loop clamps the pull to the zoom margin).
+  KING_SCALE: 1.35,
+  KING_CAM_ZOOM: 1.12,
+  KING_CAM_PULL: 90,
+  KING_CAM_MOVE: 0.16,
   // The first round in a location is short; every completed round adds
   // ROUND_SEC_STEP until the regular ROUND_SEC is reached (see roundSeconds).
   FIRST_ROUND_SEC: 40,
@@ -11,14 +41,16 @@ export const CONFIG = Object.freeze({
   // Fallback gravity for decorative motion (fruit halves); thrown objects use
   // gravityFor(height) so flight time is the same on every screen.
   GRAVITY: 1800,
-  // Object size: diameter ~12 % of the short screen side, hit circle equal to
-  // the drawing.
-  RADIUS: 62,
+  // Object size: drawing ~15 % of the short screen side, hit circle equal to
+  // the drawing. Interim value — the reference looks larger; to be measured
+  // from a phone screenshot (our research notes (kept outside the repo)).
+  RADIUS: 75,
   HIT_SCALE: 1.0,
-  // Highest throw reaches 82 % of the screen height; a full up-and-down flight
-  // of the highest throw takes 2.34 s.
+  // Highest throw reaches 82 % of the screen height (apex share still to be
+  // measured); a full flight takes 2.13–2.42 s: speed 10.1–11.5 under
+  // gravity 9.5 in the reference.
   APEX_MAX: 0.82,
-  AIRTIME_MAX: 2.34,
+  AIRTIME_MAX: 2.42,
   SWIPE_MIN_SPEED: 500,
   SLOW_SEC: 4,
   SLOW_SCALE: 0.45,
@@ -35,17 +67,30 @@ export const CONFIG = Object.freeze({
   BONUS_CHANCE: 0.06,
 });
 
-// Spawn mix per location.
+// Sliceable mix per location: which share of microbe/fruit each throw gets.
+// Forbidden characters ("cells") are not random any more — they fly out on
+// the fixed schedule of src/core/waves.js, one plan for every
+// location; only their faces change.
 export const LOCATIONS = Object.freeze({
-  hands: { microbe: 0.7, fruit: 0.15, cell: 0.15 },
-  kitchen: { microbe: 0.35, fruit: 0.5, cell: 0.15 },
-  blood: { microbe: 0.45, fruit: 0.15, cell: 0.4 },
-  mouth: { microbe: 0.55, fruit: 0.25, cell: 0.2 },
-  tummy: { microbe: 0.45, fruit: 0.25, cell: 0.3 },
-  skin: { microbe: 0.55, fruit: 0.2, cell: 0.25 },
+  hands: { microbe: 0.82, fruit: 0.18 },
+  kitchen: { microbe: 0.41, fruit: 0.59 },
+  blood: { microbe: 0.75, fruit: 0.25 },
+  mouth: { microbe: 0.69, fruit: 0.31 },
+  tummy: { microbe: 0.64, fruit: 0.36 },
+  skin: { microbe: 0.73, fruit: 0.27 },
 });
 
 export const LOCATION_ORDER = Object.freeze(['hands', 'kitchen', 'blood', 'mouth', 'tummy', 'skin']);
+
+// Display names and hints — docs (scripts/waves-table.mjs) and screens share them.
+export const LOCATION_INFO = Object.freeze({
+  hands: { name: 'Долоньки', icon: 'soap', hint: 'Мий мікробів!' },
+  kitchen: { name: 'Кухня вітамінів', icon: 'orange', hint: 'Збирай вітаміни!' },
+  blood: { name: 'Клітинкова річка', icon: 'chervonya', hint: 'Не чіпай своїх!' },
+  mouth: { name: 'Ротик', icon: 'zubchyk', hint: 'Бережи зубки!' },
+  tummy: { name: 'Животик', icon: 'dobryk', hint: 'Добрика не чіпай!' },
+  skin: { name: 'Шкіра', icon: 'hat', hint: 'Шкіра — наш щит!' },
+});
 
 // Default pools. "cell" means any friendly character that must not be touched.
 export const TYPES = Object.freeze({

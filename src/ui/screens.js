@@ -3,16 +3,7 @@
 import gsap from 'gsap';
 import { ART, fullSvg, svgDataUrl } from '../render/art.js';
 import { STICKERS } from '../core/progress.js';
-import { CONFIG, LOCATION_ORDER, typesFor } from '../core/config.js';
-
-export const LOCATION_INFO = {
-  hands: { name: 'Долоньки', icon: 'soap', hint: 'Мий мікробів!' },
-  kitchen: { name: 'Кухня вітамінів', icon: 'orange', hint: 'Збирай вітаміни!' },
-  blood: { name: 'Клітинкова річка', icon: 'chervonya', hint: 'Не чіпай своїх!' },
-  mouth: { name: 'Ротик', icon: 'zubchyk', hint: 'Бережи зубки!' },
-  tummy: { name: 'Животик', icon: 'dobryk', hint: 'Добрика не чіпай!' },
-  skin: { name: 'Шкіра', icon: 'hat', hint: 'Шкіра — наш щит!' },
-};
+import { CONFIG, LOCATION_INFO, LOCATION_ORDER, typesFor } from '../core/config.js';
 
 // Why a friendly character must not be touched, per character.
 const FRIEND_NOTE = {
@@ -91,7 +82,9 @@ export function createUI(root, { progress, onTap = () => {} }) {
 
     showTitle() {
       hideHud();
-      const last = progress.lastUnlocked();
+      // «Грати» follows the chain: the next location that still needs rounds.
+      const next = progress.nextLocation();
+      const roundNo = (progress.state.rounds[next] ?? 0) + 1;
       mount(
         `${muteBtn()}
         <div class="title-wrap">
@@ -99,7 +92,7 @@ export function createUI(root, { progress, onTap = () => {} }) {
             <div class="logo-chars">${img('chykhunchyk', 'float a')}${img('bilyk', 'float b')}${img('orange', 'float c')}</div>
             <h1>Мильна<br>Хвиля</h1>
           </div>
-          <button class="big-btn pop" data-act="play" data-arg="${last}">Грати</button>
+          <button class="big-btn pop" data-act="play" data-arg="${next}">Грати<span class="btn-sub">${LOCATION_INFO[next].name} · раунд ${roundNo}</span></button>
           <div class="loc-row">${LOCATION_ORDER.map(locationCard).join('')}</div>
           <div class="row">
             <button class="mid-btn calm pop" data-act="calm">🫧 Перед процедурою</button>
@@ -118,6 +111,7 @@ export function createUI(root, { progress, onTap = () => {} }) {
       hud.className = 'hud';
       hud.innerHTML = `
         <svg class="timer" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" class="track"/><circle cx="32" cy="32" r="26" class="bar"/></svg>
+        <div class="lives">${Array.from({ length: CONFIG.MAX_LIVES }, () => img('heart', 'heart-img')).join('')}</div>
         <div class="score">${img('bubble', 'score-img')}<span class="score-n">0</span></div>
         <div class="jar">${img('jar', 'jar-img')}<span class="jar-n">0</span></div>
         <button class="icon-btn pause" data-act="pause" aria-label="Пауза">⏸</button>
@@ -129,13 +123,26 @@ export function createUI(root, { progress, onTap = () => {} }) {
       root.append(hud);
     },
 
-    updateHud({ remaining, total, vitamins, score, calm }) {
+    updateHud({ remaining, total, vitamins, score, lives, calm }) {
       if (!hud) return;
       const bar = hud.querySelector('.bar');
       const frac = calm ? 1 : Math.max(0, remaining) / (total || CONFIG.ROUND_SEC);
       bar.style.strokeDashoffset = String(163.4 * (1 - frac));
       hud.querySelector('.timer').classList.toggle('hidden', !!calm);
       hud.querySelector('.jar').classList.toggle('hidden', !!calm);
+      // Hearts: calm mode has none (nothing can be dropped there).
+      const livesEl = hud.querySelector('.lives');
+      livesEl.classList.toggle('hidden', !!calm || !CONFIG.GAME_OVER);
+      if (!calm && lives != null && hud._lives !== lives) {
+        const before = hud._lives ?? lives;
+        hud._lives = lives;
+        const hearts = livesEl.querySelectorAll('.heart-img');
+        hearts.forEach((el, i) => el.classList.toggle('off', i >= lives));
+        if (before !== lives) {
+          const el = hearts[lives < before ? lives : lives - 1];
+          if (el) gsap.fromTo(el, { scale: 1.45 }, { scale: 1, duration: 0.55, ease: 'elastic.out(1.1, 0.45)' });
+        }
+      }
       const n = hud.querySelector('.jar-n');
       if (n.textContent !== String(vitamins)) n.textContent = String(vitamins);
       const sc = hud.querySelector('.score-n');
@@ -181,12 +188,32 @@ export function createUI(root, { progress, onTap = () => {} }) {
       gsap.to(t, { opacity: 0, duration: 0.4, delay: 1.6 });
     },
 
-    showReward({ sticker, fact, unlocked, summary }) {
+    showReward({
+      sticker, fact, unlocked, summary, note = '',
+      round = 1, loc = 'hands', best = null, achievements = [], plusSeconds = 0,
+    }) {
       const a = ART[sticker.art];
+      const hearts = Array.from(
+        { length: CONFIG.MAX_LIVES },
+        (_, i) => `<i class="heart ${i < summary.lives ? '' : 'off'}">❤️</i>`,
+      ).join('');
+      const record = best?.isRecord
+        ? '<div class="record new pop">🏆 Новий рекорд!</div>'
+        : best && best.value > 0
+          ? `<div class="record pop">🏆 Рекорд: ${best.value}</div>`
+          : '';
+      const ach = achievements.length
+        ? `<div class="ach-list pop">${achievements.map((x) => `<span class="ach ${x.isNew ? 'new' : ''}">${x.icon} ${esc(x.title)}${x.isNew ? '<b> нова</b>' : ''}</span>`).join('')}</div>`
+        : '';
       mount(
         `<div class="card reward">
           <h2 class="pop">Чудово!</h2>
+          <p class="reward-round pop">Раунд ${round} · ${esc(LOCATION_INFO[loc].name)}</p>
+          ${note ? `<p class="reward-note pop">${esc(note)}</p>` : ''}
           <div class="stats pop"><span>🫧 ${summary.score}</span><span>🍊 ${summary.vitamins}</span><span>⭐ ×${summary.bestCombo}</span></div>
+          <div class="stats-mini pop">${CONFIG.GAME_OVER ? `<span>${hearts}</span>` : ''}<span>✨ ${summary.sliced ?? 0}</span></div>
+          ${record}
+          ${ach}
           <div class="sticker pop ${sticker.isNew ? 'new' : ''}">
             ${img(sticker.art, 'sticker-img')}
             <span class="badge">${sticker.isNew ? 'Нова наліпка!' : `Ще одна! ×${sticker.count}`}</span>
@@ -195,9 +222,10 @@ export function createUI(root, { progress, onTap = () => {} }) {
           ${fact ? `<div class="fact pop"><p>${esc(fact.text)}</p><small>Прочитайте дитині</small></div>` : ''}
           ${unlocked ? `<div class="unlock pop">Відкрито нове місце: <b>${LOCATION_INFO[unlocked].name}</b>!</div>` : ''}
           <div class="row">
-            <button class="big-btn pop" data-act="again">Ще раз</button>
+            <button class="big-btn pop" data-act="again">Наступний раунд</button>
             <button class="mid-btn pop" data-act="menu">До меню</button>
           </div>
+          ${plusSeconds > 0 ? `<p class="reward-hint pop">⏱ Наступний раунд на ${plusSeconds} с довший</p>` : ''}
         </div>`,
         'overlay',
       );
@@ -224,9 +252,10 @@ export function createUI(root, { progress, onTap = () => {} }) {
         `<div class="card howto">
           <h2 class="pop">Як грати?</h2>
           <p class="how-loc pop">${LOCATION_INFO[loc].name}</p>
+          ${row(['heart'], 'Бережи сердечка!', 'Мимо — мінус сердечко', true)}
           ${row(pools.microbe.slice(0, 2), 'Мий мікробів!', 'Проведи пальцем — і в бульбашку', true)}
           ${row(pools.fruit.slice(0, 2), 'Збирай вітаміни!', 'Фрукти — у баночку', true)}
-          ${row(pools.cell.slice(0, 2), 'Своїх не чіпай!', friend, false)}
+          ${row(pools.cell.slice(0, 2), 'Своїх не чіпай!', `${friend} · зачепиш — раунд зупиниться`, false)}
           ${row(pools.bonus, 'Лови бонуси!', 'Вони допомагають', true)}
           <div class="row">
             <button class="big-btn pop" data-act="${mode === 'start' ? 'intro-go' : 'menu'}">${mode === 'start' ? 'Грати!' : 'Добре'}</button>
@@ -244,8 +273,8 @@ export function createUI(root, { progress, onTap = () => {} }) {
           <h2 class="pop">Чудова робота!</h2>
           <p class="pop">Перепочинь трішки 🙂<br>Випий води або обійми маму.</p>
           <div class="row">
-            <button class="mid-btn pop" data-act="again-now">Ще раз</button>
-            <button class="big-btn pop" data-act="menu">До меню</button>
+            <button class="big-btn pop" data-act="again-now">Наступний раунд</button>
+            <button class="mid-btn pop" data-act="menu">До меню</button>
           </div>
         </div>`,
         'overlay',
@@ -313,6 +342,7 @@ export function createUI(root, { progress, onTap = () => {} }) {
             <li>Без реклами, покупок і реєстрації.</li>
             <li>Гра не збирає жодних даних. Прогрес зберігається лише на цьому телефоні.</li>
             <li>Перші раунди короткі (близько 40 секунд) і поступово подовжуються до хвилини. Кожні три раунди гра пропонує перепочити.</li>
+            <li>У раунді три сердечка: промах забирає одне, а випадково зачеплена клітинка-персонаж зупиняє раунд раніше. За очки сердечка повертаються.</li>
             <li>Режим «Перед процедурою» допомагає заспокоїтися — дихайте разом з дитиною.</li>
             <li>Факти про здоров'я взято з відкритих джерел (ВООЗ, CDC, MedlinePlus, USDA). Вони чекають на перевірку лікарем.</li>
             <li>Гра не замінює пораду лікаря.</li>

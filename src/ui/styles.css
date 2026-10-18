@@ -76,6 +76,8 @@ button {
 .mid-btn.atlas { background: linear-gradient(180deg, #fff6c4, #ffe27a); }
 .mid-btn.danger { background: #ffe0ec; color: #a3166a; }
 .big-btn:active, .mid-btn:active { transform: translateY(3px); }
+/* Second line inside the big button: where «Грати» leads. */
+.btn-sub { display: block; font-size: 15px; font-weight: 800; margin-top: 1px; opacity: 0.9; }
 .link-btn { background: none; text-decoration: underline; font-weight: 700; font-size: 17px; opacity: 0.8; min-height: 44px; }
 
 .icon-btn {
@@ -139,6 +141,9 @@ button {
 .timer { position: absolute; top: calc(12px + var(--safe-top)); left: 12px; width: 64px; height: 64px; transform: rotate(-90deg); }
 .timer .track { fill: rgba(255, 255, 255, 0.7); stroke: rgba(31, 80, 99, 0.15); stroke-width: 8; }
 .timer .bar { fill: none; stroke: var(--magenta); stroke-width: 8; stroke-linecap: round; stroke-dasharray: 163.4; }
+.lives { position: absolute; top: calc(80px + var(--safe-top)); left: 14px; display: flex; gap: 3px; }
+.heart-img { width: 34px; height: 34px; transition: opacity 0.3s, filter 0.3s; }
+.heart-img.off { opacity: 0.32; filter: grayscale(1); }
 .score { position: absolute; top: calc(10px + var(--safe-top)); left: 84px; display: flex; align-items: center; gap: 2px; }
 .score-img { width: 56px; height: 56px; }
 .score-n { font-weight: 900; font-size: 30px; color: var(--white); -webkit-text-stroke: 2px var(--teal); paint-order: stroke fill; }
@@ -193,6 +198,7 @@ button {
   gap: 12px;
 }
 .card h2 { margin: 0; font-size: 40px; font-weight: 900; color: var(--magenta); }
+.reward-note { margin: -4px 0 0; font-weight: 800; font-size: 18px; color: var(--blue); }
 .stats { display: flex; gap: 14px; font-weight: 900; font-size: 22px; }
 .sticker { position: relative; }
 .sticker-img { width: 170px; height: 170px; filter: drop-shadow(0 8px 10px rgba(31, 80, 99, 0.25)); }
@@ -219,6 +225,32 @@ button {
 .fact p { margin: 0; font-size: 21px; font-weight: 800; line-height: 1.25; }
 .fact small { opacity: 0.6; font-weight: 700; }
 .unlock { font-weight: 800; font-size: 18px; color: var(--blue); }
+/* Reward extras: round line, hearts and slice tally, record, achievements. */
+.reward-round { margin: -8px 0 0; font-weight: 800; font-size: 18px; color: var(--blue); }
+.stats-mini { display: flex; gap: 16px; font-weight: 900; font-size: 20px; align-items: center; }
+.stats-mini .heart { font-style: normal; }
+.stats-mini .heart.off { opacity: 0.22; filter: grayscale(1); }
+.record { font-weight: 900; font-size: 20px; color: #b07a00; }
+.record.new { color: var(--magenta); animation: record-pop 0.6s ease-out; }
+@keyframes record-pop { 0% { transform: scale(0.5); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+.card.reward { gap: 10px; }
+.ach-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+}
+.ach {
+  background: var(--sun);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.15;
+}
+.ach b { font-size: 12px; color: var(--magenta); text-transform: uppercase; }
+.ach.new { box-shadow: 0 0 0 3px var(--magenta) inset; }
+.reward-hint { margin: -2px 0 0; font-weight: 800; font-size: 16px; color: #1f8a56; }
 
 .rest-chars { display: flex; justify-content: center; }
 .rest-chars img { width: 96px; height: 96px; }

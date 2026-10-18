@@ -22,6 +22,17 @@ export function createEntityView(e, art, bubbleTex = null) {
     gsap.to(halo.scale, { x: halo.scale.x * 1.18, y: halo.scale.y * 1.18, duration: 0.6, yoyo: true, repeat: -1, ease: 'sine.inOut' });
   }
 
+  // The king wears a soft golden aura so the child spots him at once.
+  if (e.kind === 'king') {
+    const halo = new Sprite(haloTexture());
+    halo.anchor.set(0.5);
+    halo.width = halo.height = size * 1.5;
+    halo.tint = 0xffd23f;
+    halo.alpha = 0.55;
+    inner.addChild(halo);
+    gsap.to(halo.scale, { x: halo.scale.x * 1.12, y: halo.scale.y * 1.12, duration: 0.9, yoyo: true, repeat: -1, ease: 'sine.inOut' });
+  }
+
   const body = new Sprite(art.body);
   body.anchor.set(0.5);
   body.width = body.height = size;
@@ -45,7 +56,7 @@ export function createEntityView(e, art, bubbleTex = null) {
     container.addChild(bubble);
   }
 
-  const faced = e.kind === 'microbe' || e.kind === 'cell';
+  const faced = e.kind === 'microbe' || e.kind === 'cell' || e.kind === 'king';
   const eyesBaseY = eyes ? eyes.scale.y : 1;
   let blinkIn = 1.5 + Math.random() * 3;
   let blinkLeft = 0;

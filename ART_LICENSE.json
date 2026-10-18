@@ -26,6 +26,12 @@
       "file": "src/render/art.js"
     },
     {
+      "key": "korol",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
+    },
+    {
       "key": "chervonya",
       "origin": "original",
       "author": "Мильна Хвиля project (code-generated SVG)",

@@ -6,20 +6,101 @@ import { createSpawner } from './spawner.js';
 import { stepEntity, isOffscreen } from './physics.js';
 import { segmentHitsCircle } from './swipe.js';
 
-export function createRound({ seed, width, height, location, mode, duration = CONFIG.ROUND_SEC }) {
+export function createRound({
+  seed, width, height, location, mode, duration = CONFIG.ROUND_SEC, run = null, gameOver = CONFIG.GAME_OVER,
+}) {
   const rng = mulberry32(seed);
-  const spawner = createSpawner({ rng, width, height, location, mode, duration });
+  const spawner = createSpawner({ rng, width, height, location, mode, duration, run });
   const listeners = new Map();
   const calm = mode === 'calm';
   const state = {
     time: 0, entities: [], combo: 0, bestCombo: 0, score: 0, vitamins: 0,
     slow: 0, shield: 0, ended: false, mode, location, width, height, duration,
+    // Lives and the king follow the classic arcade rules (lives only matter
+    // when gameOver is on).
+    lives: CONFIG.MAX_LIVES, maxLives: CONFIG.MAX_LIVES, gameOver,
+    nextLifeAt: CONFIG.LIFE_FIRST_AT, nextKingAt: CONFIG.KING_AFTER,
+    kingActive: false, burst: 0, reason: null,
+    // Round tally for the reward screen (achievements, records): everything
+    // cleanly sliced, dropped microbes/fruits, king cuts.
+    sliced: 0, missed: 0, kingHits: 0,
+    // Spawner clock: freezes while the king is on screen, so the wave queue
+    // waits while the king is on screen.
+    spawnTime: 0,
   };
   const shieldCenter = { x: width / 2, y: height * 0.5 };
 
   const emit = (name, ...args) => {
     for (const fn of listeners.get(name) ?? []) fn(...args);
   };
+
+  // Points count both scores (microbes) and vitamins (fruit): the child earns
+  // hearts back for everything they slice cleanly.
+  const points = () => state.score + state.vitamins;
+
+  function endRound(reason) {
+    if (state.ended) return;
+    state.ended = true;
+    state.reason = reason;
+    emit('end', {
+      score: state.score, vitamins: state.vitamins, bestCombo: state.bestCombo,
+      lives: state.lives, reason,
+      sliced: state.sliced, missed: state.missed, kingHits: state.kingHits,
+      points: state.score + state.vitamins,
+    });
+  }
+
+  // A heart comes back at the first 100 points,
+  // then every 100 after that (and never above three).
+  function checkLives() {
+    while (points() >= state.nextLifeAt) {
+      if (state.lives < CONFIG.MAX_LIVES) {
+        state.lives++;
+        emit('life', state.lives);
+      }
+      state.nextLifeAt += CONFIG.LIFE_STEP;
+    }
+  }
+
+  // ── the microbe king ──
+  // Enters at 50 points, then every 100. Cuts count one per 0.077 s at most.
+  // While he is around, characters are shooed away and defused when he is
+  // cut; when his five seconds are up he bursts and time rushes back.
+  function shooCells(king) {
+    for (const c of state.entities) {
+      if (!c.alive || c.kind !== 'cell') continue;
+      c.vx += (Math.sign(c.x - king.x) || Math.sign(king.vx) || 1) * 320;
+      c.vy -= 160;
+    }
+  }
+
+  function defuseCells(king) {
+    for (const c of state.entities) {
+      if (!c.alive || c.kind !== 'cell' || c.defused) continue;
+      c.defused = true;
+      c.vx += (Math.sign(c.x - king.x) || Math.sign(king.vx) || 1) * 260;
+      c.vy -= 220;
+      emit('cellDefused', c);
+    }
+  }
+
+  function spawnKing() {
+    const king = spawner.king(state.time);
+    state.entities.push(king);
+    state.kingActive = true;
+    emit('spawn', king);
+    emit('kingSpawn', king);
+    shooCells(king);
+    while (points() >= state.nextKingAt) state.nextKingAt += CONFIG.KING_EVERY;
+  }
+
+  function blastKing(king) {
+    king.alive = false;
+    state.kingActive = false;
+    state.burst = CONFIG.KING_BURST_SEC;
+    emit('kingBlast', king);
+    emit('remove', king);
+  }
 
   function bumpCombo() {
     state.combo++;
@@ -34,6 +115,8 @@ export function createRound({ seed, width, height, location, mode, duration = CO
   function capture(e, byBonus) {
     kill(e);
     state.score++;
+    state.sliced++;
+    checkLives();
     if (!byBonus) bumpCombo();
     emit('capture', e, { combo: state.combo, byBonus });
   }
@@ -57,19 +140,43 @@ export function createRound({ seed, width, height, location, mode, duration = CO
     } else if (e.kind === 'fruit') {
       kill(e);
       state.vitamins++;
+      state.sliced++;
+      checkLives();
       bumpCombo();
       const angle = Math.atan2(seg.y2 - seg.y1, seg.x2 - seg.x1);
       emit('slice', e, { angle, combo: state.combo });
     } else if (e.kind === 'cell') {
+      // A defused character (the king was cut while it was around) is safe
+      // and pops harmlessly; a live one ends the round on the spot, like a
+      // classic bomb — the child never loses the round, it just stops early.
+      if (e.defused) {
+        kill(e);
+        emit('cellPop', e);
+        return;
+      }
       if (e.cooldown > 0) return;
       e.cooldown = CONFIG.CELL_COOLDOWN;
-      state.combo = 0;
       const away = Math.sign(e.x - (seg.x1 + seg.x2) / 2) || 1;
       e.vx += away * 400;
       e.vy -= 200;
       emit('cellTouched', e);
+      // Classic lives: a live character ends the round like a bomb. Without
+      // them (default) it only giggles and breaks the combo.
+      if (gameOver) endRound('cell');
+      else state.combo = 0;
     } else if (e.kind === 'bonus') {
       activateBonus(e);
+    } else if (e.kind === 'king') {
+      // One point per cut, but no faster than every 0.077 s (FN
+      // minSliceInterval); cutting him also defuses every character on screen.
+      if (state.time - e.lastSliceAt < CONFIG.KING_SLICE_MIN) return;
+      e.lastSliceAt = state.time;
+      e.hits++;
+      state.kingHits++;
+      state.score++;
+      checkLives();
+      defuseCells(e);
+      emit('kingSlice', e, { hits: e.hits });
     }
   }
 
@@ -118,16 +225,31 @@ export function createRound({ seed, width, height, location, mode, duration = CO
       state.time += dt;
       tickTimers(dt);
 
+      // The king arrives on his points mark (play mode only).
+      if (!calm && !state.ended && !state.kingActive && state.burst <= 0
+        && points() >= state.nextKingAt) spawnKing();
+
       if (!state.ended) {
-        for (const e of spawner.update(state.time, dt, state.entities.length)) {
+        if (!state.kingActive) state.spawnTime += dt;
+        for (const e of spawner.update(state.spawnTime, dt, state.entities.length)) {
           state.entities.push(e);
           emit('spawn', e);
         }
       }
 
-      const motionDt = state.slow > 0 ? dt * CONFIG.SLOW_SCALE : dt;
+      // Time scale: bonuses slow the world, the king slows it more, and his
+      // burst ramps everything back up from 5.3 % to 100 %.
+      let scale = 1;
+      if (state.slow > 0) scale = Math.min(scale, CONFIG.SLOW_SCALE);
+      if (state.kingActive) scale = Math.min(scale, CONFIG.KING_SLOW);
+      if (state.burst > 0) {
+        state.burst = Math.max(0, state.burst - dt);
+        const back = 1 - state.burst / CONFIG.KING_BURST_SEC;
+        scale = CONFIG.KING_BURST_MIN + (1 - CONFIG.KING_BURST_MIN) * back;
+      }
+      const motionDt = dt * scale;
       for (const e of state.entities) {
-        stepEntity(e, motionDt, spawner.gravity);
+        stepEntity(e, motionDt, e.gravity ?? spawner.gravity);
         if (e.cooldown > 0) e.cooldown -= dt;
       }
 
@@ -136,22 +258,36 @@ export function createRound({ seed, width, height, location, mode, duration = CO
         applyShield();
       }
 
+      // The king bursts when his five seconds are up.
+      if (state.kingActive) {
+        const king = state.entities.find((e) => e.alive && e.kind === 'king');
+        if (!king) state.kingActive = false;
+        else if (state.time - king.born >= CONFIG.KING_SEC) blastKing(king);
+      }
+
       const kept = [];
       for (const e of state.entities) {
         if (!e.alive) continue;
         if (isOffscreen(e, height, width)) {
           e.alive = false;
           emit('remove', e);
+          // A dropped microbe or fruit costs a heart (classic lives rule); the
+          // king himself never costs anything.
+          if (!calm && (e.kind === 'microbe' || e.kind === 'fruit')) {
+            state.missed++;
+            if (gameOver) {
+              state.lives = Math.max(0, state.lives - 1);
+              emit('miss', e, state.lives);
+              if (state.lives === 0) endRound('lives');
+            }
+          }
           continue;
         }
         kept.push(e);
       }
       state.entities = kept;
 
-      if (!calm && !state.ended && state.time >= state.duration) {
-        state.ended = true;
-        emit('end', { score: state.score, vitamins: state.vitamins, bestCombo: state.bestCombo });
-      }
+      if (!calm && !state.ended && state.time >= state.duration) endRound('time');
     },
   };
 }
