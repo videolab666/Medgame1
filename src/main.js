@@ -28,6 +28,7 @@ import { applyPost } from './fx/post.js';
 import { createSynth } from './audio/synth.js';
 import { initVoice, playVoice } from './audio/voice.js';
 import { createMusic } from './audio/music.js';
+import { POWERUPS } from './core/economy.js';
 import { createUI } from './ui/screens.js';
 import factsData from '../content/facts.uk.json';
 
@@ -255,12 +256,20 @@ function play(loc, powerups = []) {
 }
 
 // Pre-round screen: pick power-ups for the coming round (or play right away).
+// Skipped when it has nothing to offer: the first round in a location starts
+// right away, and so does any round when no power-up is affordable.
+const CHEAPEST_POWERUP = Math.min(...POWERUPS.map((x) => x.price));
 function prep(loc) {
   synth.unlock();
   if (!progress.isUnlocked(loc)) return;
   currentLoc = loc;
+  const firstRound = !(progress.state.rounds[loc] > 0);
+  if (firstRound || progress.state.stars < CHEAPEST_POWERUP) {
+    play(loc);
+    return;
+  }
   scene = 'prep';
-  ui.showPrep(loc, (progress.state.rounds[loc] ?? 0) + 1);
+  ui.showPrep(loc, progress.state.rounds[loc] + 1);
 }
 
 // A calm session counts for Bilyk's calm tasks after half a minute.
