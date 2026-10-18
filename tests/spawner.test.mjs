@@ -229,7 +229,9 @@ test('each location spawns only its own pools', async () => {
   const { typesFor, LOCATION_ORDER } = await import('../src/core/config.js');
   for (const loc of LOCATION_ORDER) {
     const pools = typesFor(loc);
-    for (const e of run({ location: loc })) assert.ok(pools[e.kind].includes(e.type), `${loc}: ${e.kind} ${e.type}`);
+    for (const e of run({ location: loc }).filter((x) => x.kind !== 'gold')) {
+      assert.ok(pools[e.kind].includes(e.type), `${loc}: ${e.kind} ${e.type}`);
+    }
   }
 });
 
@@ -321,4 +323,23 @@ test('set weights live in the trip, not in the spawner', () => {
   });
   step(next, 0.7); // one more pick happens in the next round
   assert.equal(trip.weights.a, w, 'the next round reuses the very same weights');
+});
+
+test('golden stars: rare, from a side, never in the opening, never shift the plan', async () => {
+  const { ECONOMY } = await import('../src/core/economy.js');
+  let total = 0;
+  for (let seed = 1; seed <= 40; seed++) {
+    const es = run({}, 60, seed);
+    const golds = es.filter((e) => e.kind === 'gold');
+    total += golds.length;
+    assert.ok(golds.length <= ECONOMY.GOLD_MAX);
+    for (const g of golds) {
+      assert.ok(g.x < 0 || g.x > 1000, 'drifts in from a side');
+      assert.ok(g.born > 4, 'not in the first two waves');
+    }
+    // The plan without golds is the same whatever the gold stream does.
+    const plain = es.filter((e) => e.kind !== 'gold').map((e) => e.kind + e.type);
+    assert.deepEqual(plain, run({}, 60, seed).filter((e) => e.kind !== 'gold').map((e) => e.kind + e.type));
+  }
+  assert.ok(total > 0, 'some golden stars over 40 rounds');
 });

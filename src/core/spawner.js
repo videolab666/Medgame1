@@ -12,7 +12,8 @@
 // the way one classic arcade game keeps climbing. Without `run` (tests, tools)
 // the spawner keeps that state for itself.
 import { CONFIG, LOCATIONS, gravityFor, typesFor } from './config.js';
-import { pick, range } from './rng.js';
+import { mulberry32, pick, range } from './rng.js';
+import { ECONOMY } from './economy.js';
 import { ANGLE_MAX, SAFE_SLOTS, SPEED_MIN_RATIO, WAVE_PLAN } from './waves.js';
 
 const CELL_GAP = 200;
@@ -28,6 +29,11 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
   const hScale = Math.min(1, (width / height) / (2412 / 1080));
   let nextId = 1;
   let bonuses = 0;
+  // Golden stars come from their own random stream, so adding them never
+  // shifts the wave plan.
+  const goldRng = mulberry32(((width * 7919) ^ (height * 104729) ^ duration * 31) >>> 0);
+  let golds = 0;
+  let pendingGold = null;
 
   // Wave state: absolute spawn times of the current wave, waiting in `queue`.
   const runState = run ?? { slot: 0, speeds: {}, weights: {} };
@@ -109,23 +115,24 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
     e.vy = -v * Math.cos(angle);
   }
 
-  function make(kind, type, x, t, opts = {}) {
+  // `r` is the random stream to use (golden stars bring their own).
+  function make(kind, type, x, t, opts = {}, r = rng) {
     const e = {
       id: nextId++, kind, type, x, y: height + CONFIG.RADIUS,
-      vx: 0, vy: 0, rot: 0, vrot: range(rng, -2, 2), r: CONFIG.RADIUS,
-      alive: true, float: false, born: t, age: 0, phase: rng() * Math.PI * 2, ts: opts.ts ?? 1,
+      vx: 0, vy: 0, rot: 0, vrot: range(r, -2, 2), r: CONFIG.RADIUS,
+      alive: true, float: false, born: t, age: 0, phase: r() * Math.PI * 2, ts: opts.ts ?? 1,
     };
     if (opts.float) {
       e.float = true;
-      e.vy = -140 * range(rng, 0.85, 1.2);
-      e.vrot = range(rng, -0.4, 0.4);
+      e.vy = -140 * range(r, 0.85, 1.2);
+      e.vrot = range(r, -0.4, 0.4);
       return e;
     }
     if (opts.side) {
       // Bonuses drift in from a side, slower and lower — easy to spot.
-      const fromLeft = rng() < 0.5;
+      const fromLeft = r() < 0.5;
       e.x = fromLeft ? -CONFIG.RADIUS : width + CONFIG.RADIUS;
-      e.y = height * range(rng, 0.55, 0.75);
+      e.y = height * range(r, 0.55, 0.75);
       e.vx = (fromLeft ? 1 : -1) * (width / 2.6);
       e.vy = -Math.sqrt(2 * gravity * height * 0.18);
       return e;
@@ -179,6 +186,12 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
     if (kind === 'bonus') bonuses++;
     const e = make(kind, pick(rng, TYPES[kind]), x, t, { side: kind === 'bonus', ts: wave.tsScale ?? 1 });
     wave.batch.push(e);
+    // Now and then a golden star drifts in from a side next to a throw.
+    if (!wave.safe && (kind === 'microbe' || kind === 'fruit') && golds < ECONOMY.GOLD_MAX
+      && goldRng() < ECONOMY.GOLD_CHANCE) {
+      golds++;
+      pendingGold = make('gold', 'goldstar', x, t, { side: true }, goldRng);
+    }
     return e;
   }
 
@@ -211,6 +224,10 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
 
   return {
     gravity,
+    // Extra round time («Ще трішки»): waves keep coming until the new end.
+    extend(sec) {
+      duration += sec;
+    },
     // Spawns the king for the round loop (lives, slices and the burst live in
     // src/core/round.js — the wave queue never contains him).
     king: makeKing,
@@ -224,7 +241,7 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
       // series leaves ~1 s after the previous fruit disappears). Side-drifting
       // bonuses and the king do not hold the next wave back.
       if (wave && !wave.cleared && queue.length === 0
-        && wave.batch.every((e) => !e.alive || e.kind === 'bonus' || e.kind === 'king')) {
+        && wave.batch.every((e) => !e.alive || e.kind === 'bonus' || e.kind === 'king' || e.kind === 'gold')) {
         wave.cleared = true;
         nextWaveAt = Math.max(nextWaveAt, t + wave.end);
       }
@@ -236,6 +253,10 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
         const { spec } = queue.shift();
         if (t > duration - 0.4) continue;
         out.push(emitOne(t, out, spec));
+        if (pendingGold) {
+          out.push(pendingGold);
+          pendingGold = null;
+        }
       }
       return out;
     },

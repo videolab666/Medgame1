@@ -3,6 +3,9 @@
 // when localStorage is unavailable.
 import { CONFIG, LOCATION_ORDER } from './config.js';
 import { earnedAchievements } from './achievements.js';
+import {
+  AVATARS, ECONOMY, POWERUPS, TASKS, TRAILS, avatarLevel, levelFromXp, roundEarnings, taskById,
+} from './economy.js';
 import { pick } from './rng.js';
 
 const ART_BY_LOCATION = {
@@ -35,6 +38,12 @@ const defaults = () => ({
   muted: false,
   seenFacts: {},
   tutorialDone: false,
+  // Economy (economy.js): stars are earned by playing only.
+  stars: 0,
+  xp: 0,
+  avatar: AVATARS[0],
+  trails: { owned: [TRAILS[0].id], selected: TRAILS[0].id },
+  tasks: { active: TASKS.slice(0, ECONOMY.ACTIVE_TASKS).map((t) => ({ id: t.id, progress: 0 })), next: ECONOMY.ACTIVE_TASKS },
 });
 
 export function memoryStorage() {
@@ -86,9 +95,68 @@ export function createProgress(storage, { unlockAll = CONFIG.UNLOCK_ALL } = {}) 
         })),
         best: { ...base.best, ...loaded.best },
         achievements: { ...loaded.achievements },
+        trails: { ...base.trails, ...loaded.trails, owned: [...(loaded.trails?.owned ?? base.trails.owned)] },
+        tasks: loaded.tasks?.active?.length
+          ? { active: loaded.tasks.active.map((t) => ({ ...t })), next: loaded.tasks.next ?? ECONOMY.ACTIVE_TASKS }
+          : base.tasks,
       }
     : base;
   const save = () => storage.save(state);
+
+  // ── economy ──
+  // Adds XP and stars; every new level brings stars, an avatar and maybe a trail.
+  function gain(xp, stars) {
+    const before = levelFromXp(state.xp).level;
+    state.xp += xp;
+    state.stars += stars;
+    const after = levelFromXp(state.xp).level;
+    const levelUps = [];
+    for (let lv = before + 1; lv <= after; lv++) {
+      state.stars += ECONOMY.LEVEL_STARS;
+      levelUps.push({
+        level: lv,
+        stars: ECONOMY.LEVEL_STARS,
+        avatar: AVATARS[lv - 1] ?? null,
+        trail: TRAILS.find((t) => t.level === lv) ?? null,
+      });
+    }
+    return levelUps;
+  }
+
+  // The next task in the cycle that is not already on the board.
+  function nextTask() {
+    for (let i = 0; i < TASKS.length; i++) {
+      const t = TASKS[(state.tasks.next + i) % TASKS.length];
+      if (!state.tasks.active.some((a) => a.id === t.id)) {
+        state.tasks.next = (state.tasks.next + i + 1) % TASKS.length;
+        return { id: t.id, progress: 0 };
+      }
+    }
+    return null;
+  }
+
+  // Moves tasks forward by `amount(task)`; finished ones pay out and are
+  // replaced right away. Returns the finished tasks and any level-ups.
+  function advanceTasks(amount) {
+    const done = [];
+    let levelUps = [];
+    state.tasks.active = state.tasks.active.map((a) => {
+      const t = taskById(a.id);
+      if (!t) return nextTask() ?? a;
+      const add = amount(t);
+      if (!add) return a;
+      const progress = Math.min(t.target, a.progress + add);
+      if (progress < t.target) return { ...a, progress };
+      done.push({ id: t.id, text: t.text, reward: t.reward });
+      return null;
+    }).filter(Boolean);
+    for (const d of done) {
+      levelUps = levelUps.concat(gain(d.reward, d.reward));
+      const n = nextTask();
+      if (n) state.tasks.active.push(n);
+    }
+    return { done, levelUps };
+  }
 
   const isUnlocked = (loc) => {
     const i = LOCATION_ORDER.indexOf(loc);
@@ -146,11 +214,69 @@ export function createProgress(storage, { unlockAll = CONFIG.UNLOCK_ALL } = {}) 
         });
       }
 
+      // Stars, XP, tasks.
+      let economy = null;
+      if (summary) {
+        const earned = roundEarnings(summary);
+        const levelUps = gain(earned.xp, earned.stars);
+        const tasks = advanceTasks((t) => (t.calm ? 0 : t.stat({ ...summary, location: summary.location ?? loc })));
+        economy = {
+          stars: earned.stars, xp: earned.xp, gold: earned.gold,
+          levelUps: levelUps.concat(tasks.levelUps), tasksDone: tasks.done,
+        };
+      }
+
       state.sinceRest++;
       const rest = state.sinceRest >= CONFIG.REST_EVERY;
       if (rest) state.sinceRest = 0;
       save();
-      return { sticker: { ...s, isNew, count: state.stickers[s.id] }, unlocked, rest, best, achievements };
+      return { sticker: { ...s, isNew, count: state.stickers[s.id] }, unlocked, rest, best, achievements, economy };
+    },
+    levelInfo: () => levelFromXp(state.xp),
+    // A calm-mode session long enough to count (main decides) moves calm tasks.
+    recordCalm() {
+      const r = advanceTasks((t) => (t.calm ? 1 : 0));
+      save();
+      return r;
+    },
+    powerupCost: (ids) => ids.reduce((sum, id) => sum + (POWERUPS.find((p) => p.id === id)?.price ?? 0), 0),
+    // Pays for the power-ups of the next round; false if the stars are short.
+    buyPowerups(ids) {
+      const list = [...new Set(ids)].filter((id) => POWERUPS.some((p) => p.id === id)).slice(0, ECONOMY.MAX_POWERUPS);
+      const cost = this.powerupCost(list);
+      if (cost > state.stars) return false;
+      state.stars -= cost;
+      save();
+      return list;
+    },
+    trailState(id) {
+      const t = TRAILS.find((x) => x.id === id);
+      if (!t) return 'none';
+      if (state.trails.owned.includes(id)) return state.trails.selected === id ? 'selected' : 'owned';
+      if (levelFromXp(state.xp).level < t.level) return 'locked';
+      return 'buyable';
+    },
+    buyTrail(id) {
+      const t = TRAILS.find((x) => x.id === id);
+      if (!t || this.trailState(id) !== 'buyable' || state.stars < t.price) return false;
+      state.stars -= t.price;
+      state.trails.owned.push(id);
+      state.trails.selected = id;
+      save();
+      return true;
+    },
+    selectTrail(id) {
+      if (!state.trails.owned.includes(id)) return false;
+      state.trails.selected = id;
+      save();
+      return true;
+    },
+    avatarOpen: (key) => avatarLevel(key) > 0 && avatarLevel(key) <= levelFromXp(state.xp).level,
+    selectAvatar(key) {
+      if (!this.avatarOpen(key)) return false;
+      state.avatar = key;
+      save();
+      return true;
     },
     setSeenFacts(loc, ids) {
       state.seenFacts[loc] = ids;

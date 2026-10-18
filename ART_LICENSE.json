@@ -210,6 +210,12 @@
       "origin": "original",
       "author": "Мильна Хвиля project (code-generated SVG)",
       "file": "src/render/art.js"
+    },
+    {
+      "key": "goldstar",
+      "origin": "original",
+      "author": "Мильна Хвиля project (code-generated SVG)",
+      "file": "src/render/art.js"
     }
   ]
 }

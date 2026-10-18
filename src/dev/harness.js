@@ -73,6 +73,10 @@ export function installHarness(game) {
       intro.click();
       await window.__fast(0.3);
     }
+    // Pre-round screen: optional power-ups (window.__powerups), then play.
+    for (const id of window.__powerups ?? []) window.__click(`[data-act=pu-toggle][data-arg=${id}]`);
+    window.__click('[data-act=prep-go]');
+    await window.__fast(0.3);
     const types = new Set();
     let bonuses = 0;
     game.round.on('bonus', () => bonuses++);

@@ -1,6 +1,7 @@
 // One round of play (or the endless calm mode). Pure logic; emits events that
 // render, fx, audio and UI subscribe to.
 import { CONFIG, BONUS_EFFECT } from './config.js';
+import { POWERUP_FX } from './economy.js';
 import { mulberry32 } from './rng.js';
 import { createSpawner } from './spawner.js';
 import { stepEntity, isOffscreen } from './physics.js';
@@ -8,7 +9,9 @@ import { segmentHitsCircle } from './swipe.js';
 
 export function createRound({
   seed, width, height, location, mode, duration = CONFIG.ROUND_SEC, run = null, gameOver = CONFIG.GAME_OVER,
+  powerups = [],
 }) {
+  const has = (id) => powerups.includes(id);
   const rng = mulberry32(seed);
   const spawner = createSpawner({ rng, width, height, location, mode, duration, run });
   const listeners = new Map();
@@ -18,7 +21,12 @@ export function createRound({
     slow: 0, shield: 0, ended: false, mode, location, width, height, duration,
     // Lives and the king follow the classic arcade rules (lives only matter
     // when gameOver is on).
-    lives: CONFIG.MAX_LIVES, maxLives: CONFIG.MAX_LIVES, gameOver,
+    lives: CONFIG.MAX_LIVES + (has('heart') ? POWERUP_FX.EXTRA_LIVES : 0),
+    maxLives: CONFIG.MAX_LIVES + (has('heart') ? POWERUP_FX.EXTRA_LIVES : 0),
+    gameOver,
+    // Power-ups bought for this round (economy.js) and what they still hold.
+    powerups: [...powerups], forgive: has('shield') ? POWERUP_FX.SHIELD_FORGIVES : 0,
+    gold: 0, cellTouches: 0,
     nextLifeAt: CONFIG.LIFE_FIRST_AT, nextKingAt: CONFIG.KING_AFTER,
     kingActive: false, burst: 0, reason: null,
     // Round tally for the reward screen (achievements, records): everything
@@ -29,6 +37,8 @@ export function createRound({
     spawnTime: 0,
   };
   const shieldCenter = { x: width / 2, y: height * 0.5 };
+  // «Велика хвиля»: a wider swipe reaches objects farther from the finger.
+  const hitScale = CONFIG.HIT_SCALE * (has('wide') ? POWERUP_FX.WIDE_SCALE : 1);
 
   const emit = (name, ...args) => {
     for (const fn of listeners.get(name) ?? []) fn(...args);
@@ -47,6 +57,8 @@ export function createRound({
       lives: state.lives, reason,
       sliced: state.sliced, missed: state.missed, kingHits: state.kingHits,
       points: state.score + state.vitamins,
+      gold: state.gold, cellTouches: state.cellTouches, powerups: [...state.powerups],
+      location, duration: state.duration,
     });
   }
 
@@ -54,7 +66,7 @@ export function createRound({
   // then every 100 after that (and never above three).
   function checkLives() {
     while (points() >= state.nextLifeAt) {
-      if (state.lives < CONFIG.MAX_LIVES) {
+      if (state.lives < state.maxLives) {
         state.lives++;
         emit('life', state.lives);
       }
@@ -145,6 +157,24 @@ export function createRound({
       bumpCombo();
       const angle = Math.atan2(seg.y2 - seg.y1, seg.x2 - seg.x1);
       emit('slice', e, { angle, combo: state.combo });
+      // «Ще трішки»: every orange adds time to the round.
+      if (has('time') && e.type === 'orange') {
+        state.duration += POWERUP_FX.TIME_PER_ORANGE;
+        spawner.extend(POWERUP_FX.TIME_PER_ORANGE);
+        emit('timeBonus', e, POWERUP_FX.TIME_PER_ORANGE);
+      }
+      // «Іскриста полуниця»: a sliced strawberry catches microbes around it.
+      if (has('berry') && e.type === 'strawberry') {
+        let caught = 0;
+        for (const m of state.entities) {
+          if (!m.alive || m.kind !== 'microbe') continue;
+          if (Math.hypot(m.x - e.x, m.y - e.y) <= POWERUP_FX.BERRY_RADIUS) {
+            capture(m, true);
+            caught++;
+          }
+        }
+        emit('berryBurst', e, caught);
+      }
     } else if (e.kind === 'cell') {
       // A defused character (the king was cut while it was around) is safe
       // and pops harmlessly; a live one ends the round on the spot, like a
@@ -156,6 +186,16 @@ export function createRound({
       }
       if (e.cooldown > 0) return;
       e.cooldown = CONFIG.CELL_COOLDOWN;
+      state.cellTouches++;
+      // «Щит Білика» forgives a few touches: the character just bounces off.
+      if (state.forgive > 0) {
+        state.forgive--;
+        const off = Math.sign(e.x - (seg.x1 + seg.x2) / 2) || 1;
+        e.vx += off * 400;
+        e.vy -= 200;
+        emit('forgive', e, state.forgive);
+        return;
+      }
       const away = Math.sign(e.x - (seg.x1 + seg.x2) / 2) || 1;
       e.vx += away * 400;
       e.vy -= 200;
@@ -166,6 +206,10 @@ export function createRound({
       else state.combo = 0;
     } else if (e.kind === 'bonus') {
       activateBonus(e);
+    } else if (e.kind === 'gold') {
+      kill(e);
+      state.gold++;
+      emit('gold', e);
     } else if (e.kind === 'king') {
       // One point per cut, but no faster than every 0.077 s (FN
       // minSliceInterval); cutting him also defuses every character on screen.
@@ -185,7 +229,7 @@ export function createRound({
       if (!(seg.active || (calm && seg.tap) || (calm && seg.speed > 0))) continue;
       for (const e of state.entities) {
         if (!e.alive) continue;
-        if (segmentHitsCircle(seg.x1, seg.y1, seg.x2, seg.y2, e.x, e.y, e.r * CONFIG.HIT_SCALE)) resolve(e, seg);
+        if (segmentHitsCircle(seg.x1, seg.y1, seg.x2, seg.y2, e.x, e.y, e.r * hitScale)) resolve(e, seg);
       }
     }
   }
@@ -242,6 +286,8 @@ export function createRound({
       let scale = 1;
       if (state.slow > 0) scale = Math.min(scale, CONFIG.SLOW_SCALE);
       if (state.kingActive) scale = Math.min(scale, CONFIG.KING_SLOW);
+      // «Повільний старт»: the first seconds fly slower.
+      if (has('slow') && state.time < POWERUP_FX.SLOW_SEC) scale = Math.min(scale, POWERUP_FX.SLOW_SCALE);
       if (state.burst > 0) {
         state.burst = Math.max(0, state.burst - dt);
         const back = 1 - state.burst / CONFIG.KING_BURST_SEC;

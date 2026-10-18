@@ -4,7 +4,7 @@ import { Container, Sprite } from 'pixi.js';
 import gsap from 'gsap';
 import { haloTexture } from './textures.js';
 
-const BONUS_TINT = { soap: 0xff9ad5, toothbrush: 0x8fe3f7, vaccine: 0x7df3e1, patch: 0xffd27a };
+const BONUS_TINT = { soap: 0xff9ad5, toothbrush: 0x8fe3f7, vaccine: 0x7df3e1, patch: 0xffd27a, goldstar: 0xffe066 };
 
 export function createEntityView(e, art, bubbleTex = null) {
   const container = new Container();
@@ -12,7 +12,7 @@ export function createEntityView(e, art, bubbleTex = null) {
   container.addChild(inner);
   const size = 200 * (e.r / 75);
 
-  if (e.kind === 'bonus') {
+  if (e.kind === 'bonus' || e.kind === 'gold') {
     const halo = new Sprite(haloTexture());
     halo.anchor.set(0.5);
     halo.width = halo.height = size * 1.5;

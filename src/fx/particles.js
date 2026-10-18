@@ -101,6 +101,15 @@ export function createParticles(layer, { max = 2000 } = {}) {
         });
       }
     },
+    // A trail bit of a given shape (stars, hearts, rings, confetti…).
+    trailBit(x, y, { frame = 'sparkle', color = 0xffffff } = {}) {
+      spawn({
+        frame: frames[frame] ?? frames.sparkle, x: x + rand(-14, 14), y: y + rand(-14, 14),
+        vx: rand(-40, 40), vy: rand(-30, 50), g: frame === 'confetti' ? 300 : 0, drag: 0.93,
+        life: rand(0.35, 0.7), size: rand(16, 32), color, twinkle: frame === 'sparkle' ? 14 : 0,
+        spin: frame === 'confetti' || frame === 'star' ? rand(-6, 6) : 0, rot: rand(0, 6),
+      });
+    },
     trailGlitter(x, y, color) {
       spawn({
         frame: frames.sparkle, x: x + rand(-14, 14), y: y + rand(-14, 14), vx: rand(-30, 30), vy: rand(-30, 30),

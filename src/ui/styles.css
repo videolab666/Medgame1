@@ -350,3 +350,126 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .float, .wave { animation: none; }
 }
+
+/* ---------- economy: profile, wallet, power-ups, tasks, trails */
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow);
+  align-self: stretch;
+}
+.profile-avatar { width: 48px; height: 48px; }
+.profile-info { flex: 1; display: flex; flex-direction: column; gap: 4px; text-align: left; }
+.profile-info b { font-size: 16px; font-weight: 900; }
+.xp { display: block; height: 10px; border-radius: 6px; background: rgba(31, 80, 99, 0.15); overflow: hidden; }
+.xp i { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, #7ed957, #4fb3ff); }
+.xp.big { height: 14px; flex: 1; }
+.wallet { font-weight: 900; font-size: 18px; white-space: nowrap; }
+.wallet.big { font-size: 20px; text-align: center; }
+.mid-btn.tasks { background: linear-gradient(180deg, #e9ffe0, #bff2a8); }
+.mid-btn.trails { background: linear-gradient(180deg, #f3e8ff, #dcc8ff); }
+.mid-btn.small { min-height: 44px; padding: 6px 14px; font-size: 16px; }
+.mid-btn:disabled { opacity: 0.45; }
+
+.pu-row { position: absolute; top: calc(112px + var(--safe-top)); left: 12px; display: flex; gap: 4px; }
+.pu-chip { position: relative; font-size: 22px; background: rgba(255, 255, 255, 0.85); border-radius: 12px; padding: 2px 6px; }
+.pu-chip.spent { opacity: 0.4; }
+.pu-chip .forgive { position: absolute; right: -6px; bottom: -6px; font-size: 13px; background: var(--magenta); color: #fff; border-radius: 9px; padding: 0 5px; }
+
+.prep { gap: 10px; }
+.prep-hint { margin: 0; font-weight: 700; opacity: 0.75; }
+.pu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; width: 100%; }
+.pu-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border-radius: 18px;
+  background: var(--mint);
+  border: 3px solid transparent;
+  transition: transform 0.1s;
+}
+.pu-card .pu-icon { font-size: 32px; }
+.pu-card b { font-size: 15px; font-weight: 900; line-height: 1.1; }
+.pu-card small { font-size: 12px; font-weight: 700; opacity: 0.7; line-height: 1.2; }
+.pu-card .pu-price { font-weight: 900; color: #b07800; }
+.pu-card.on { border-color: var(--magenta); background: #ffe6f3; }
+.pu-card.dim { opacity: 0.45; }
+
+.earn { display: flex; gap: 12px; font-weight: 900; font-size: 20px; color: #b07800; }
+.lvl-line { display: flex; align-items: center; gap: 10px; width: 100%; font-size: 16px; }
+.levelup {
+  width: 100%;
+  border-radius: 18px;
+  padding: 10px;
+  background: linear-gradient(180deg, #fff6c4, #ffe27a);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.levelup b { font-size: 22px; color: var(--magenta); }
+.levelup span { font-weight: 800; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.lu-avatar { width: 36px; height: 36px; vertical-align: middle; }
+.tasks-done { display: flex; flex-direction: column; gap: 4px; font-weight: 800; }
+.tasks-done b { color: #b07800; }
+
+.tasks-intro { display: flex; align-items: center; gap: 10px; }
+.tasks-bilyk { width: 72px; height: 72px; flex: none; }
+.tasks-intro p { margin: 0; font-weight: 800; }
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--white);
+  border-radius: 20px;
+  padding: 12px;
+  box-shadow: var(--shadow);
+}
+.task-text { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.task-text b { font-size: 18px; }
+.task-text small { font-weight: 700; opacity: 0.6; }
+.task-reward { font-weight: 900; font-size: 18px; color: #b07800; white-space: nowrap; }
+
+.tabs.two { grid-template-columns: repeat(2, 1fr); }
+.trail-list { display: flex; flex-direction: column; gap: 8px; }
+.trail-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--white);
+  border-radius: 18px;
+  padding: 10px 12px;
+  box-shadow: var(--shadow);
+}
+.trail-card b { flex: 1; font-size: 17px; }
+.trail-card.locked { opacity: 0.6; }
+.trail-card.selected { outline: 3px solid var(--magenta); }
+.tr-preview { width: 64px; height: 14px; border-radius: 8px; flex: none; }
+.tr-state { font-weight: 800; }
+.tr-state.on { color: var(--magenta); }
+.grid.avatars .slot.selected { outline: 4px solid var(--magenta); }
+
+.notice {
+  position: fixed;
+  top: calc(16px + var(--safe-top));
+  left: 50%;
+  translate: -50% 0;
+  z-index: 20;
+  background: var(--white);
+  color: var(--teal);
+  font-weight: 900;
+  font-size: 18px;
+  padding: 10px 18px;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  white-space: nowrap;
+}
+/* Keep the profile chip clear of the sound button in the top-right corner. */
+.screen.title .profile { align-self: flex-start; width: calc(100% - 64px); }

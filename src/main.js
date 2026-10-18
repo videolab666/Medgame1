@@ -60,6 +60,7 @@ const [art] = await Promise.all([
 
 const particles = createParticles(stage.layers.fx, { max: 2000 });
 const trail = createTrail(stage.layers.fx, particles);
+trail.setStyle(progress.state.trails.selected);
 const flash = createFlashGuard(400);
 const hud = {
   jarWorldPos: () => {
@@ -127,7 +128,7 @@ function teardown() {
   acc = 0;
 }
 
-function startRound(loc, mode, { interactive = true } = {}) {
+function startRound(loc, mode, { interactive = true, powerups = [] } = {}) {
   teardown();
   const tutorial = mode === 'play' && !progress.state.tutorialDone;
   // Rounds start short (40 s) and grow +5 s per completed round up to 60 s.
@@ -144,6 +145,7 @@ function startRound(loc, mode, { interactive = true } = {}) {
     // A round continues the location's endless wave trip (a classic run
     // cut into timed pieces): cursor, speeds and weights live in the save.
     run: mode === 'play' ? progress.runFor(loc) : null,
+    powerups: mode === 'play' ? powerups : [],
   });
   round.interactive = interactive;
   round.on('spawn', (e) => {
@@ -166,6 +168,14 @@ function startRound(loc, mode, { interactive = true } = {}) {
     camState.hold = CONFIG.KING_CAM_MOVE;
   });
   effects.attach(round, views);
+  // Economy moments during the round.
+  round.on('gold', () => ui.toast('Золота зірочка! +5 ⭐'));
+  round.on('forgive', (e, left) => {
+    ui.hudForgive(left);
+    ui.toast(left > 0 ? `Щит Білика! Ще ${left}` : 'Щит Білика спрацював!');
+  });
+  round.on('timeBonus', (e, sec) => ui.toast(`+${sec} с`));
+  round.on('berryBurst', (e, n) => { if (n) ui.toast(`Іскриста полуниця! +${n}`); });
   if (mode === 'play') {
     round.on('end', (summary) => {
       ui.hideHud();
@@ -213,33 +223,55 @@ function finishRound(loc, summary, wasTutorial) {
     sticker: result.sticker, fact, unlocked: result.unlocked, summary,
     note: END_NOTE[summary.reason] ?? '',
     round: done, loc, best: result.best, achievements: result.achievements, plusSeconds,
+    economy: result.economy,
   });
+  // A new level unlocks a trail: keep the current one, but celebrate.
+  if (result.economy?.levelUps?.length) synth.sparkle();
   if (!music.jingle('reward')) synth.fanfare();
   if (fact) playVoice(fact.id, { muted: progress.state.muted });
 }
 
 function goTitle() {
+  // Leaving a long-enough calm session moves the calm tasks.
+  if (scene === 'calm' && performance.now() - calmStartedAt >= CALM_TASK_SEC * 1000) {
+    const r = progress.recordCalm();
+    for (const t of r.done) ui.notice(`🎯 ${t.text} · +${t.reward} ⭐`);
+  }
   scene = 'title';
   currentLoc = progress.nextLocation();
   startRound(currentLoc, 'calm', { interactive: false });
   ui.showTitle();
 }
 
-function play(loc) {
+function play(loc, powerups = []) {
   synth.unlock();
   music.unlock();
   if (!progress.isUnlocked(loc)) return;
   currentLoc = loc;
   scene = 'round';
   ui.hideScreen();
-  ui.showHud();
-  startRound(loc, 'play');
+  startRound(loc, 'play', { powerups });
+  ui.showHud(round.state.maxLives, powerups);
 }
+
+// Pre-round screen: pick power-ups for the coming round (or play right away).
+function prep(loc) {
+  synth.unlock();
+  if (!progress.isUnlocked(loc)) return;
+  currentLoc = loc;
+  scene = 'prep';
+  ui.showPrep(loc, (progress.state.rounds[loc] ?? 0) + 1);
+}
+
+// A calm session counts for Bilyk's calm tasks after half a minute.
+let calmStartedAt = 0;
+const CALM_TASK_SEC = 30;
 
 function calm() {
   synth.unlock();
   music.unlock();
   scene = 'calm';
+  calmStartedAt = performance.now();
   startRound(currentLoc, 'calm');
   ui.showCalm();
 }
@@ -259,13 +291,41 @@ ui.on('play', (loc) => {
     ui.showIntro('start', loc);
     return;
   }
-  play(loc);
+  prep(loc);
 });
 ui.on('how', () => ui.showIntro('info', currentLoc));
 ui.on('intro-go', () => {
   const loc = introLoc;
   introLoc = null;
-  if (loc) play(loc);
+  if (loc) prep(loc);
+});
+ui.on('pu-toggle', (id) => ui.prepToggle(id));
+ui.on('prep-go', () => {
+  const bought = progress.buyPowerups(ui.prepSelection());
+  play(currentLoc, bought || []);
+});
+ui.on('tasks', () => {
+  scene = 'tasks';
+  ui.showTasks();
+});
+ui.on('collection', (tab) => {
+  scene = 'collection';
+  ui.showCollection(tab || 'trails');
+});
+ui.on('trail-buy', (id) => {
+  if (progress.buyTrail(id)) {
+    trail.setStyle(id);
+    synth.sparkle();
+  }
+  ui.showCollection('trails');
+});
+ui.on('trail-pick', (id) => {
+  if (progress.selectTrail(id)) trail.setStyle(id);
+  ui.showCollection('trails');
+});
+ui.on('avatar-pick', (key) => {
+  progress.selectAvatar(key);
+  ui.showCollection('avatars');
 });
 ui.on('locked', () => synth.giggle());
 ui.on('calm', calm);
@@ -302,9 +362,9 @@ ui.on('again', () => {
     music.play('rest');
     return;
   }
-  play(currentLoc);
+  prep(currentLoc);
 });
-ui.on('again-now', () => play(currentLoc));
+ui.on('again-now', () => prep(currentLoc));
 ui.on('pause', pause);
 ui.on('resume', () => {
   paused = false;

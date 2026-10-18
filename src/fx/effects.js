@@ -381,6 +381,31 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
         if (type === 'shield') hideDome();
         if (type === 'slow') hideSlowTint();
       });
+      // Economy moments: a caught golden star, a forgiven touch, a berry burst.
+      round.on('gold', (e) => {
+        const v = take(e);
+        particles.emit('sparkle', e.x, e.y, { count: 26, color: 0xffe27a, spread: 120 });
+        particles.emit('confetti', e.x, e.y, { count: 12 });
+        synth.sparkle();
+        haptic([8, 30, 8]);
+        if (v) {
+          T(gsap.to(v.container.scale, { x: 1.8, y: 1.8, duration: 0.3, ease: 'back.out(2)' }));
+          T(gsap.to(v.container, { alpha: 0, duration: 0.3, onComplete: () => v.destroy() }));
+        }
+      });
+      round.on('forgive', (e) => {
+        particles.emit('hearts', e.x, e.y - 30, { count: 4 });
+        particles.emit('bubblePop', e.x, e.y, { count: 8 });
+        synth.giggle();
+      });
+      round.on('berryBurst', (e) => {
+        particles.emit('sparkle', e.x, e.y, { count: 30, color: 0xff8fb8, spread: 500 });
+        particles.emit('bubblePop', e.x, e.y, { count: 14 });
+        synth.combo();
+      });
+      round.on('timeBonus', (e) => {
+        particles.emit('sparkle', e.x, e.y, { count: 10, color: 0xffd27a });
+      });
       round.on('end', () => {
         hideKingDim();
         particles.emit('starRain', stage.width);

@@ -717,6 +717,33 @@ const cream = {
     ),
 };
 
+// ---------------------------------------------------------------- economy
+
+const goldstar = {
+  name: 'Золота зірочка',
+  line: 'Рідкісна! Злови — і отримаєш зірочки.',
+  eyeY: 108,
+  body() {
+    const pts = [];
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const rr = i % 2 ? 36 : 80;
+      pts.push(`${(100 + Math.cos(a) * rr).toFixed(1)} ${(108 + Math.sin(a) * rr).toFixed(1)}`);
+    }
+    return wrap(
+      `<circle cx="100" cy="104" r="88" fill="url(#halo)"/>` +
+        `<path d="M ${pts.join(' L ')} Z" fill="url(#g)" stroke="#c98a00" stroke-width="6" stroke-linejoin="round"/>` +
+        gloss(80, 78, 18, 9) +
+        blush(126, 26) +
+        smile(126, 11),
+      radial('g', '#fff6b0', '#ffd23f', '#e0a000') +
+        `<radialGradient id="halo"><stop offset="0.45" stop-color="#ffe27a" stop-opacity="0.55"/><stop offset="1" stop-color="#ffe27a" stop-opacity="0"/></radialGradient>` +
+        SHINE,
+    );
+  },
+  eyes: () => wrap(eyePair(108, { gap: 16, r: 9 })),
+};
+
 // Tutorial ghost hand (pointing finger).
 const hand = {
   name: 'Підказка',
@@ -736,6 +763,7 @@ export const ART = {
   zubchyk, toothbrush, toothpaste, kysliuk,
   dobryk, yogurt, banana, plate,
   hat, cream,
+  goldstar,
   hand,
 };
 

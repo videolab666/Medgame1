@@ -4,6 +4,9 @@ import gsap from 'gsap';
 import { ART, fullSvg, svgDataUrl } from '../render/art.js';
 import { STICKERS } from '../core/progress.js';
 import { CONFIG, LOCATION_INFO, LOCATION_ORDER, typesFor } from '../core/config.js';
+import {
+  AVATARS, ECONOMY, POWERUPS, TRAILS, avatarLevel, taskById,
+} from '../core/economy.js';
 
 // Why a friendly character must not be touched, per character.
 const FRIEND_NOTE = {
@@ -22,6 +25,18 @@ const BONUS_WORDS = {
   patch: 'Латочка: усе повільно!',
 };
 
+// Small colour previews of the finger trails for the collection screen.
+const TRAIL_PREVIEW = {
+  rainbow: 'linear-gradient(90deg,#ff5c9a,#ffa62b,#ffe27a,#7ed957,#4fb3ff,#a77bf3)',
+  stars: 'linear-gradient(90deg,#fff6c4,#ffd23f,#ffffff)',
+  hearts: 'linear-gradient(90deg,#ffc2d6,#ff5c9a,#ff9cc0)',
+  snow: 'linear-gradient(90deg,#ffffff,#c9f3ff,#8fd3ff)',
+  bubbles: 'linear-gradient(90deg,#c9f3ff,#ffd6f5,#c9f3ff)',
+  confetti: 'repeating-linear-gradient(90deg,#ff5c9a 0 10px,#ffe27a 10px 20px,#4fb3ff 20px 30px,#7ed957 30px 40px)',
+  neon: 'linear-gradient(90deg,#ff3df2,#3dfcff,#ff3df2)',
+  gold: 'linear-gradient(90deg,#c98a00,#ffd23f,#fff6b0,#ffd23f)',
+};
+
 const img = (key, cls = '') => `<img class="${cls}" alt="" draggable="false" src="${svgDataUrl(fullSvg(key))}">`;
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
@@ -32,6 +47,7 @@ export function createUI(root, { progress, onTap = () => {} }) {
   let hud = null;
   let calmTl = null;
   let comboEl = null;
+  let prepSel = [];
 
   function mount(html, cls) {
     unmountScreen();
@@ -55,6 +71,17 @@ export function createUI(root, { progress, onTap = () => {} }) {
     calmTl = null;
     if (screen) screen.remove();
     screen = null;
+  }
+
+  // Avatar, level with its XP bar and the star wallet.
+  function profileChip() {
+    const lv = progress.levelInfo();
+    const pct = Math.round((lv.into / lv.need) * 100);
+    return `<button class="profile pop" data-act="collection" data-arg="avatars" aria-label="Профіль">
+      ${img(progress.state.avatar, 'profile-avatar')}
+      <span class="profile-info"><b>Рівень ${lv.level}</b><span class="xp"><i style="width:${pct}%"></i></span></span>
+      <span class="wallet">⭐ ${progress.state.stars}</span>
+    </button>`;
   }
 
   const muteBtn = () =>
@@ -88,6 +115,7 @@ export function createUI(root, { progress, onTap = () => {} }) {
       mount(
         `${muteBtn()}
         <div class="title-wrap">
+          ${profileChip()}
           <div class="logo pop">
             <div class="logo-chars">${img('chykhunchyk', 'float a')}${img('bilyk', 'float b')}${img('orange', 'float c')}</div>
             <h1>Мильна<br>Хвиля</h1>
@@ -99,19 +127,29 @@ export function createUI(root, { progress, onTap = () => {} }) {
             <button class="mid-btn atlas pop" data-act="atlas">📒 Атлас тіла</button>
             <button class="mid-btn how pop" data-act="how">👆 Як грати?</button>
           </div>
+          <div class="row">
+            <button class="mid-btn tasks pop" data-act="tasks">🎯 Завдання</button>
+            <button class="mid-btn trails pop" data-act="collection" data-arg="trails">✨ Сліди й значки</button>
+          </div>
           <button class="link-btn pop" data-act="parents">Для батьків</button>
         </div>`,
         'title',
       );
     },
 
-    showHud() {
+    showHud(maxLives = CONFIG.MAX_LIVES, powerups = []) {
       hideHud();
+      const pu = powerups
+        .map((id) => POWERUPS.find((x) => x.id === id))
+        .filter(Boolean)
+        .map((x) => `<span class="pu-chip" data-pu="${x.id}">${x.icon}${x.id === 'shield' ? '<b class="forgive">3</b>' : ''}</span>`)
+        .join('');
       hud = document.createElement('div');
       hud.className = 'hud';
       hud.innerHTML = `
         <svg class="timer" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" class="track"/><circle cx="32" cy="32" r="26" class="bar"/></svg>
-        <div class="lives">${Array.from({ length: CONFIG.MAX_LIVES }, () => img('heart', 'heart-img')).join('')}</div>
+        <div class="lives">${Array.from({ length: maxLives }, () => img('heart', 'heart-img')).join('')}</div>
+        <div class="pu-row">${pu}</div>
         <div class="score">${img('bubble', 'score-img')}<span class="score-n">0</span></div>
         <div class="jar">${img('jar', 'jar-img')}<span class="jar-n">0</span></div>
         <button class="icon-btn pause" data-act="pause" aria-label="Пауза">⏸</button>
@@ -179,10 +217,22 @@ export function createUI(root, { progress, onTap = () => {} }) {
       gsap.to(el, { y: -80, opacity: 0, duration: 0.6, delay: 0.9, ease: 'sine.in', onComplete: () => el.remove() });
     },
 
+    hudForgive(left) {
+      const b = hud?.querySelector('.forgive');
+      if (!b) return;
+      b.textContent = String(left);
+      gsap.fromTo(b.parentElement, { scale: 1.5 }, { scale: 1, duration: 0.5, ease: 'back.out(3)' });
+      if (left === 0) b.parentElement.classList.add('spent');
+    },
+
     bonusBadge(type) {
+      api.toast(BONUS_WORDS[type] ?? '');
+    },
+
+    toast(text) {
       const t = hud?.querySelector('.toast');
       if (!t) return;
-      t.textContent = BONUS_WORDS[type] ?? '';
+      t.textContent = text;
       gsap.killTweensOf(t);
       gsap.fromTo(t, { scale: 0.5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: 'back.out(3)' });
       gsap.to(t, { opacity: 0, duration: 0.4, delay: 1.6 });
@@ -190,11 +240,25 @@ export function createUI(root, { progress, onTap = () => {} }) {
 
     showReward({
       sticker, fact, unlocked, summary, note = '',
-      round = 1, loc = 'hands', best = null, achievements = [], plusSeconds = 0,
+      round = 1, loc = 'hands', best = null, achievements = [], plusSeconds = 0, economy = null,
     }) {
+      const lv = progress.levelInfo();
+      const lvPct = Math.round((lv.into / lv.need) * 100);
+      const earn = economy
+        ? `<div class="earn pop"><span>+${economy.stars} ⭐</span><span>+${economy.xp} досвіду</span>${economy.gold ? `<span>🌟 ×${economy.gold}</span>` : ''}</div>
+          <div class="lvl-line pop"><b>Рівень ${lv.level}</b><span class="xp big"><i style="width:${lvPct}%"></i></span></div>`
+        : '';
+      const ups = (economy?.levelUps ?? []).map((u) => `
+          <div class="levelup pop">
+            <b>🎉 Новий рівень ${u.level}!</b>
+            <span>+${u.stars} ⭐${u.avatar ? ` · новий значок ${img(u.avatar, 'lu-avatar')}` : ''}${u.trail ? ` · слід «${esc(u.trail.name)}»` : ''}</span>
+          </div>`).join('');
+      const tasksDone = economy?.tasksDone?.length
+        ? `<div class="tasks-done pop">${economy.tasksDone.map((t) => `<span>🎯 ${esc(t.text)} <b>+${t.reward} ⭐</b></span>`).join('')}</div>`
+        : '';
       const a = ART[sticker.art];
       const hearts = Array.from(
-        { length: CONFIG.MAX_LIVES },
+        { length: CONFIG.MAX_LIVES + (summary.powerups?.includes('heart') ? 1 : 0) },
         (_, i) => `<i class="heart ${i < summary.lives ? '' : 'off'}">❤️</i>`,
       ).join('');
       const record = best?.isRecord
@@ -210,7 +274,10 @@ export function createUI(root, { progress, onTap = () => {} }) {
           <h2 class="pop">Чудово!</h2>
           <p class="reward-round pop">Раунд ${round} · ${esc(LOCATION_INFO[loc].name)}</p>
           ${note ? `<p class="reward-note pop">${esc(note)}</p>` : ''}
-          <div class="stats pop"><span>🫧 ${summary.score}</span><span>🍊 ${summary.vitamins}</span><span>⭐ ×${summary.bestCombo}</span></div>
+          ${ups}
+          <div class="stats pop"><span>🫧 ${summary.score}</span><span>🍊 ${summary.vitamins}</span><span>⚡ ×${summary.bestCombo}</span></div>
+          ${earn}
+          ${tasksDone}
           <div class="stats-mini pop">${CONFIG.GAME_OVER ? `<span>${hearts}</span>` : ''}<span>✨ ${summary.sliced ?? 0}</span></div>
           ${record}
           ${ach}
@@ -264,6 +331,133 @@ export function createUI(root, { progress, onTap = () => {} }) {
         </div>`,
         'overlay',
       );
+    },
+
+    // Pre-round screen: pick up to three power-ups for the next round.
+    showPrep(loc, roundNo = 1) {
+      prepSel = [];
+      const cards = POWERUPS.map((x) => `
+        <button class="pu-card pop" data-act="pu-toggle" data-arg="${x.id}">
+          <span class="pu-icon">${x.icon}</span>
+          <b>${esc(x.name)}</b>
+          <small>${esc(x.desc)}</small>
+          <span class="pu-price">⭐ ${x.price}</span>
+        </button>`).join('');
+      mount(
+        `<div class="card prep">
+          <h2 class="pop">Підготовка</h2>
+          <p class="reward-round pop">${esc(LOCATION_INFO[loc].name)} · раунд ${roundNo}</p>
+          <div class="wallet big pop">У тебе ⭐ <b class="prep-stars">${progress.state.stars}</b></div>
+          <p class="prep-hint pop">Обери до ${ECONOMY.MAX_POWERUPS} підпиток — або грай одразу</p>
+          <div class="pu-grid">${cards}</div>
+          <div class="row">
+            <button class="big-btn pop prep-go" data-act="prep-go">Грати!</button>
+            <button class="mid-btn pop" data-act="menu">До меню</button>
+          </div>
+        </div>`,
+        'overlay',
+      );
+      api.prepRefresh();
+    },
+
+    prepToggle(id) {
+      if (prepSel.includes(id)) prepSel = prepSel.filter((x) => x !== id);
+      else if (prepSel.length < ECONOMY.MAX_POWERUPS
+        && progress.powerupCost([...prepSel, id]) <= progress.state.stars) prepSel.push(id);
+      api.prepRefresh();
+    },
+
+    prepRefresh() {
+      if (!screen) return;
+      const cost = progress.powerupCost(prepSel);
+      screen.querySelectorAll('.pu-card').forEach((b) => {
+        const id = b.dataset.arg;
+        const on = prepSel.includes(id);
+        const can = on || (prepSel.length < ECONOMY.MAX_POWERUPS && cost + progress.powerupCost([id]) <= progress.state.stars);
+        b.classList.toggle('on', on);
+        b.classList.toggle('dim', !can);
+      });
+      const go = screen.querySelector('.prep-go');
+      if (go) go.textContent = prepSel.length ? `Грати · ⭐ ${cost}` : 'Грати!';
+      const left = screen.querySelector('.prep-stars');
+      if (left) left.textContent = String(progress.state.stars - cost);
+    },
+
+    prepSelection: () => [...prepSel],
+
+    // Bilyk's tasks: three at a time, no deadlines.
+    showTasks() {
+      hideHud();
+      const rows = progress.state.tasks.active.map((a) => {
+        const t = taskById(a.id);
+        if (!t) return '';
+        const pct = Math.round((a.progress / t.target) * 100);
+        return `<div class="task-row pop">
+          <div class="task-text"><b>${esc(t.text)}</b>
+            <span class="xp"><i style="width:${pct}%"></i></span>
+            <small>${a.progress} / ${t.target}</small></div>
+          <span class="task-reward">+${t.reward} ⭐</span>
+        </div>`;
+      }).join('');
+      mount(
+        `<div class="atlas-wrap">
+          <div class="atlas-head"><button class="icon-btn" data-act="menu" aria-label="Назад">←</button><h2>Завдання Білика</h2></div>
+          <div class="tasks-intro pop">${img('bilyk', 'tasks-bilyk')}<p>Виконуй завдання — і отримуй зірочки. Поспішати не треба!</p></div>
+          ${rows}
+        </div>`,
+        'atlas',
+      );
+    },
+
+    // Trails and avatars: open with levels, trails are bought once with stars.
+    showCollection(tab = 'trails') {
+      hideHud();
+      const lv = progress.levelInfo().level;
+      const tabs = `<div class="tabs two">
+        <button class="tab ${tab === 'trails' ? 'on' : ''}" data-act="collection" data-arg="trails">✨ Сліди</button>
+        <button class="tab ${tab === 'avatars' ? 'on' : ''}" data-act="collection" data-arg="avatars">🙂 Значки</button>
+      </div>`;
+      let body;
+      if (tab === 'trails') {
+        body = `<div class="trail-list">${TRAILS.map((t) => {
+          const st = progress.trailState(t.id);
+          const action = st === 'selected' ? '<span class="tr-state on">✓ Обрано</span>'
+            : st === 'owned' ? `<button class="mid-btn small" data-act="trail-pick" data-arg="${t.id}">Обрати</button>`
+              : st === 'locked' ? `<span class="tr-state">🔒 Рівень ${t.level}</span>`
+                : `<button class="mid-btn small buy" data-act="trail-buy" data-arg="${t.id}" ${progress.state.stars < t.price ? 'disabled' : ''}>Купити ⭐ ${t.price}</button>`;
+          return `<div class="trail-card pop ${st}">
+            <span class="tr-preview" style="background:${TRAIL_PREVIEW[t.id]}"></span>
+            <b>${esc(t.name)}</b>${action}
+          </div>`;
+        }).join('')}</div>`;
+      } else {
+        body = `<div class="grid avatars">${AVATARS.map((key) => {
+          const open = avatarLevel(key) <= lv;
+          const sel = progress.state.avatar === key;
+          return open
+            ? `<button class="slot pop ${sel ? 'selected' : ''}" data-act="avatar-pick" data-arg="${key}">${img(key)}</button>`
+            : `<div class="slot empty pop">${img(key)}<span class="count">Рів. ${avatarLevel(key)}</span></div>`;
+        }).join('')}</div>`;
+      }
+      mount(
+        `<div class="atlas-wrap">
+          <div class="atlas-head"><button class="icon-btn" data-act="menu" aria-label="Назад">←</button><h2>Сліди й значки</h2></div>
+          <div class="wallet big">Рівень ${lv} · ⭐ ${progress.state.stars}</div>
+          ${tabs}
+          ${body}
+        </div>`,
+        'atlas',
+      );
+    },
+
+    // Short floating note over any screen (e.g. a finished calm task).
+    notice(text) {
+      const el = document.createElement('div');
+      el.className = 'notice';
+      el.textContent = text;
+      root.append(el);
+      gsap.fromTo(el, { y: -40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'back.out(2.5)' });
+      gsap.to(el, { opacity: 0, duration: 0.4, delay: 3, onComplete: () => el.remove() });
     },
 
     showRest() {
@@ -345,6 +539,7 @@ export function createUI(root, { progress, onTap = () => {} }) {
             <li>У раунді три сердечка: промах забирає одне, а випадково зачеплена клітинка-персонаж зупиняє раунд раніше. За очки сердечка повертаються.</li>
             <li>Режим «Перед процедурою» допомагає заспокоїтися — дихайте разом з дитиною.</li>
             <li>Факти про здоров'я взято з відкритих джерел (ВООЗ, CDC, MedlinePlus, USDA). Вони чекають на перевірку лікарем.</li>
+            <li>Зірочки, рівні, підпитки й сліди заробляються лише грою — покупок за гроші, реклами та «скриньок» немає.</li>
             <li>Гра не замінює пораду лікаря.</li>
           </ul>
           <button class="mid-btn danger" data-act="reset">Скинути прогрес</button>
