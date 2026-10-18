@@ -11,7 +11,7 @@ export function applyPost(stage, tier) {
   let godray = null;
 
   if (q.bloom > 0) {
-    const bloom = new AdvancedBloomFilter({ threshold: 0.6, bloomScale: 1.0, brightness: 1, blur: 6, quality: q.bloom >= 1 ? 4 : 3 });
+    const bloom = new AdvancedBloomFilter({ threshold: 0.72, bloomScale: 0.9, brightness: 1, blur: 6, quality: q.bloom >= 1 ? 4 : 3 });
     bloom.resolution = q.bloom * Math.min(2, window.devicePixelRatio || 1);
     fx.filters = [bloom];
   }

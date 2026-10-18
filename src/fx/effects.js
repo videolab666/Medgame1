@@ -8,13 +8,14 @@ import { CONFIG } from '../core/config.js';
 
 const GIGGLES = ['лоскотно!', 'хі-хі!', 'ой, свої!', 'я свій!'];
 
-export function createEffects({ stage, art, particles, synth, flash, hud }) {
+export function createEffects({ stage, art, particles, synth, flash, hud, haptic = () => {} }) {
   // Own container: clearing it never touches particles or the finger trail.
   const fx = new Container();
   stage.layers.fx.addChild(fx);
   const flying = []; // fruit halves with manual physics
   let dome = null;
   let tint = null;
+  const labels = []; // giggle texts on screen, capped so they never pile up
   // Every tween/timer started here, so a round can be torn down mid-animation.
   let active = [];
   const timers = new Set();
@@ -43,7 +44,10 @@ export function createEffects({ stage, art, particles, synth, flash, hud }) {
     }
     particles.emit('sparkle', e.x, e.y, { count: 8 });
     if (info.byBonus) synth.sparkle();
-    else synth.note(info.combo);
+    else {
+      synth.note(info.combo);
+      haptic(6);
+    }
     const tl = T(gsap.timeline({
       onComplete: () => {
         popAt(c.x, c.y);
@@ -88,6 +92,7 @@ export function createEffects({ stage, art, particles, synth, flash, hud }) {
     particles.emit('juice', e.x, e.y, { color: a.juice ?? 0xffa62b, angle: info.angle });
     particles.emit('sparkle', e.x, e.y, { count: 6 });
     synth.note(info.combo);
+    haptic(8);
     vitaminDrop(e.x, e.y, a.juice ?? 0xffa62b);
   }
 
@@ -125,10 +130,20 @@ export function createEffects({ stage, art, particles, synth, flash, hud }) {
     });
     label.anchor.set(0.5);
     label.position.set(e.x, e.y - 110);
+    labels.push(label);
+    while (labels.length > 2) {
+      const old = labels.shift();
+      gsap.killTweensOf(old);
+      gsap.killTweensOf(old.scale);
+      old.destroy();
+    }
     label.scale.set(0.5);
     fx.addChild(label);
     T(gsap.to(label.scale, { x: 1, y: 1, duration: 0.35, ease: 'back.out(3)' }));
-    T(gsap.to(label, { y: label.y - 90, alpha: 0, duration: 1.1, delay: 0.4, ease: 'sine.in', onComplete: () => label.destroy() }));
+    T(gsap.to(label, { y: label.y - 90, alpha: 0, duration: 1.1, delay: 0.4, ease: 'sine.in', onComplete: () => {
+      labels.splice(labels.indexOf(label), 1);
+      label.destroy();
+    } }));
   }
 
   function softFlash(alpha = 0.18) {
@@ -236,6 +251,7 @@ export function createEffects({ stage, art, particles, synth, flash, hud }) {
       });
       round.on('combo', (n) => {
         hud.comboPopup(n);
+        haptic([10, 40, 10]);
         particles.emit('sparkle', stage.width / 2, stage.height * 0.4, { count: 10 + n * 2, spread: 400 });
         synth.chime();
         softFlash(0.12 + Math.min(n, 10) * 0.006);
@@ -282,6 +298,7 @@ export function createEffects({ stage, art, particles, synth, flash, hud }) {
       active = [];
       for (const id of timers) clearInterval(id);
       timers.clear();
+      labels.length = 0;
       for (const f of flying) f.node.destroy({ children: true });
       flying.length = 0;
       dome = null;

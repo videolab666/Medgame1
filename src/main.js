@@ -62,7 +62,11 @@ const hud = {
   comboPopup: (n) => ui.comboPopup(n),
   bonusBadge: (t) => ui.bonusBadge(t),
 };
-const effects = createEffects({ stage, art, particles, synth, flash, hud });
+// Light vibration on Android; silent mode turns it off too.
+const haptic = (pattern) => {
+  if (!progress.state.muted && navigator.vibrate) navigator.vibrate(pattern);
+};
+const effects = createEffects({ stage, art, particles, synth, flash, hud, haptic });
 let post = applyPost(stage, 'high');
 
 // ------------------------------------------------------------------ scene state
@@ -307,6 +311,7 @@ stage.app.ticker.add((ticker) => {
       ui.updateHud({
         remaining: CONFIG.ROUND_SEC - round.state.time,
         vitamins: round.state.vitamins,
+        score: round.state.score,
         calm: scene === 'calm',
       });
     }

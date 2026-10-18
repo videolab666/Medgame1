@@ -97,6 +97,7 @@ export function createUI(root, { progress }) {
       hud.className = 'hud';
       hud.innerHTML = `
         <svg class="timer" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" class="track"/><circle cx="32" cy="32" r="26" class="bar"/></svg>
+        <div class="score">${img('bubble', 'score-img')}<span class="score-n">0</span></div>
         <div class="jar">${img('jar', 'jar-img')}<span class="jar-n">0</span></div>
         <button class="icon-btn pause" data-act="pause" aria-label="Пауза">⏸</button>
         <div class="toast"></div>`;
@@ -107,7 +108,7 @@ export function createUI(root, { progress }) {
       root.append(hud);
     },
 
-    updateHud({ remaining, vitamins, calm }) {
+    updateHud({ remaining, vitamins, score, calm }) {
       if (!hud) return;
       const bar = hud.querySelector('.bar');
       const frac = calm ? 1 : Math.max(0, remaining) / CONFIG.ROUND_SEC;
@@ -116,6 +117,11 @@ export function createUI(root, { progress }) {
       hud.querySelector('.jar').classList.toggle('hidden', !!calm);
       const n = hud.querySelector('.jar-n');
       if (n.textContent !== String(vitamins)) n.textContent = String(vitamins);
+      const sc = hud.querySelector('.score-n');
+      if (sc.textContent !== String(score)) {
+        sc.textContent = String(score);
+        gsap.fromTo(hud.querySelector('.score'), { scale: 1.3 }, { scale: 1, duration: 0.4, ease: 'back.out(3)' });
+      }
     },
 
     jarScreenPos() {
