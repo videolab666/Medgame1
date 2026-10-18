@@ -25,6 +25,7 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
   const gravity = gravityFor(height);
   const vMax = Math.sqrt(2 * gravity * CONFIG.APEX_MAX * height);
   const margin = CONFIG.RADIUS * 2;
+  const hScale = Math.min(1, (width / height) / (2412 / 1080));
   let nextId = 1;
   let bonuses = 0;
 
@@ -100,7 +101,11 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
     const v = vMax * range(rng, SPEED_MIN_RATIO, 1) * (opts.speed ?? 1);
     let angle = range(rng, -ANGLE_MAX, ANGLE_MAX);
     if ((e.x < width * 0.3 && angle < 0) || (e.x > width * 0.7 && angle > 0)) angle = -angle;
-    e.vx = v * Math.sin(angle);
+    // The reference is played on a wide screen (2412 × 1080): there ±12°
+    // drifts an object about a third of the width. Scaling the sideways speed
+    // by the aspect ratio keeps that drift in shares of the width, so on a
+    // narrow portrait screen objects do not slide off the sides.
+    e.vx = v * Math.sin(angle) * hScale;
     e.vy = -v * Math.cos(angle);
   }
 
@@ -214,8 +219,17 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
         if (t < calmNextAt) return [];
         return calmBatch(t, alive);
       }
+      // A wave is over only when everything it threw is gone — sliced, caught
+      // or fallen off the screen (measured on the reference game: the next
+      // series leaves ~1 s after the previous fruit disappears). Side-drifting
+      // bonuses and the king do not hold the next wave back.
+      if (wave && !wave.cleared && queue.length === 0
+        && wave.batch.every((e) => !e.alive || e.kind === 'bonus' || e.kind === 'king')) {
+        wave.cleared = true;
+        nextWaveAt = Math.max(nextWaveAt, t + wave.end);
+      }
       // No new wave right before the bell so the round ends calmly.
-      if (queue.length === 0 && t >= nextWaveAt && t < duration - 1.5) startWave(t);
+      if (queue.length === 0 && (!wave || wave.cleared) && t >= nextWaveAt && t < duration - 1.5) startWave(t);
 
       const out = [];
       while (queue.length && t >= queue[0].t) {

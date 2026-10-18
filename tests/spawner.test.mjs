@@ -7,14 +7,33 @@ import { CONFIG, gravityFor } from '../src/core/config.js';
 
 const STEP = 1 / 60;
 const H = 2000;
-const run = (opts = {}, sec = 60, seed = 7) => {
-  const sp = createSpawner({
-    rng: mulberry32(seed), width: 1000, height: H, location: 'hands', mode: 'play', ...opts,
-  });
+// Drives a spawner frame by frame. Thrown objects fly on shadow copies (so the
+// launch velocities stay readable) and are marked gone when they leave the
+// screen — a wave only ends once its objects are gone. Nothing is sliced.
+const drive = (sp, sec) => {
   const out = [];
-  for (let i = 0; i * STEP < sec; i++) out.push(...sp.update(i * STEP, STEP, 0));
+  const flying = [];
+  const g = gravityFor(H);
+  for (let i = 0; i * STEP < sec; i++) {
+    const t = i * STEP;
+    for (const f of flying) {
+      if (!f.e.alive) continue;
+      stepEntity(f.s, STEP, f.e.gravity ?? g);
+      if (isOffscreen(f.s, H, 1000)) {
+        f.e.alive = false;
+        f.e.goneAt = t;
+      }
+    }
+    for (const e of sp.update(t, STEP, flying.filter((f) => f.e.alive).length)) {
+      out.push(e);
+      flying.push({ e, s: { ...e } });
+    }
+  }
   return out;
 };
+const run = (opts = {}, sec = 60, seed = 7) => drive(createSpawner({
+  rng: mulberry32(seed), width: 1000, height: H, location: 'hands', mode: 'play', ...opts,
+}), sec);
 // Spawns grouped into waves: inside a series throws are at most 0.7 s apart and
 // the next series waits at least 0.8 s, so 0.75 s splits the groups.
 const waves = (es) => {
@@ -31,14 +50,18 @@ test('deterministic by seed', () => {
   assert.deepEqual(run().map((e) => e.type), run().map((e) => e.type));
 });
 
-test('opening: one, one, then 2–3 thrown together; 1 s between waves (live tempo)', () => {
+test('opening: one, one, then 2–3 thrown together; each waits for the screen to clear', () => {
   const w = waves(run({}, 20));
   assert.equal(w[0].length, 1);
   assert.equal(w[1].length, 1);
   assert.ok(w[2].length >= 2 && w[2].length <= 3, `third wave ${w[2].length}`);
   assert.ok(w[2].every((e) => e.born === w[2][0].born), 'third wave is thrown together');
-  const lead = w[1][0].born - w[0][0].born;
-  assert.ok(Math.abs(lead - 1) < 0.05, `lead-in ${lead}`);
+  // Measured on the reference: the next throw comes ~1 s after the previous
+  // fruit leaves the screen; throw to throw is ~3.2 s in the opening.
+  const lead = w[1][0].born - w[0][0].goneAt;
+  assert.ok(Math.abs(lead - 1) < 0.05, `lead-in after the screen clears ${lead}`);
+  const gap = w[1][0].born - w[0][0].born;
+  assert.ok(gap > 2.8 && gap < 3.6, `throw to throw ${gap}`);
 });
 
 test('fifth stage is the slow lesson: only forbidden characters', () => {
@@ -220,11 +243,7 @@ test('tummy friendly character is the good bacterium', () => {
 // speeds of the repeating set and the regrowing weights live in the shared
 // `run`.
 
-const step = (sp, sec) => {
-  const out = [];
-  for (let i = 0; i * STEP < sec; i++) out.push(...sp.update(i * STEP, STEP, 0));
-  return out;
-};
+const step = (sp, sec) => drive(sp, sec);
 
 test('a round continues the trip from the saved slot', async () => {
   const { WAVE_PLAN } = await import('../src/core/waves.js');

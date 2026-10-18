@@ -41,15 +41,15 @@ export const CONFIG = Object.freeze({
   // Fallback gravity for decorative motion (fruit halves); thrown objects use
   // gravityFor(height) so flight time is the same on every screen.
   GRAVITY: 1800,
-  // Object size: drawing ~15 % of the short screen side, hit circle equal to
-  // the drawing. Interim value — the reference looks larger; to be measured
-  // from a phone screenshot (our research notes (kept outside the repo)).
-  RADIUS: 75,
+  // Object size: drawing ~17 % of the short screen side, hit circle equal to
+  // the drawing. Measured on the reference game (1080 px short side): lime
+  // 13 %, mango 15 %, watermelon 21 %.
+  RADIUS: 85,
   HIT_SCALE: 1.0,
-  // Highest throw reaches 82 % of the screen height (apex share still to be
-  // measured); a full flight takes 2.13–2.42 s: speed 10.1–11.5 under
-  // gravity 9.5 in the reference.
-  APEX_MAX: 0.82,
+  // Highest throw: object centre at ~77 % of the screen height, lowest ~60 %
+  // (measured 60–72 % on the reference); a full flight takes 2.13–2.42 s:
+  // speed 10.1–11.5 under gravity 9.5.
+  APEX_MAX: 0.77,
   AIRTIME_MAX: 2.42,
   SWIPE_MIN_SPEED: 500,
   SLOW_SEC: 4,

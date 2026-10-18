@@ -8,6 +8,8 @@ import {
 } from '../src/core/config.js';
 import { mulberry32 } from '../src/core/rng.js';
 import { createSpawner, FIRST_WAVE_AT } from '../src/core/spawner.js';
+import { stepEntity, isOffscreen } from '../src/core/physics.js';
+import { gravityFor } from '../src/core/config.js';
 import { SAFE_SLOTS, WAVE_PLAN } from '../src/core/waves.js';
 import { ART } from '../src/render/art.js';
 
@@ -67,17 +69,53 @@ const lastGroup = groups[groups.length - 1];
 const label = (g) => (g === lastGroup ? '23 и дальше'
   : g.from === g.to ? `${g.from}` : `${g.from}–${g.to} (×${g.count})`);
 
-// Earliest / latest start of every stage over all weighted choices.
-const windows = [];
-let lo = FIRST_WAVE_AT;
-let hi = FIRST_WAVE_AT;
-for (const entry of WAVE_PLAN) {
-  const opts = optionsOf(entry);
-  const starts = opts.map((o) => o.wave.start);
-  windows.push({ begin: [lo, hi], first: [lo + Math.min(...starts), hi + Math.max(...starts)] });
-  const totals = opts.map((o) => totalRange(o.wave));
-  lo += Math.min(...totals.map((t) => t[0]));
-  hi += Math.max(...totals.map((t) => t[1]));
+// Drives a spawner frame by frame with flight physics. A stage ends only when
+// everything it threw is gone, so timings need the flight; nobody slices here,
+// which is the slowest possible pace (slicing makes the next stage come sooner).
+const SIM_H = 2000;
+function drive(sp, duration) {
+  const out = [];
+  const flying = [];
+  const g = gravityFor(SIM_H);
+  for (let i = 0; i * CONFIG.STEP < duration; i++) {
+    const t = i * CONFIG.STEP;
+    for (const fl of flying) {
+      if (!fl.e.alive) continue;
+      stepEntity(fl.s, CONFIG.STEP, fl.e.gravity ?? g);
+      if (isOffscreen(fl.s, SIM_H, 1000)) fl.e.alive = false;
+    }
+    for (const e of sp.update(t, CONFIG.STEP, flying.filter((x) => x.e.alive).length)) {
+      out.push(e);
+      flying.push({ e, s: { ...e } });
+    }
+  }
+  return out;
+}
+// Throws grouped into series: inside a series throws are at most 0.7 s apart;
+// between series there is the flight plus a lead-in of 0.8 s or more.
+const seriesFirsts = (es) => {
+  const firsts = [];
+  let last = -Infinity;
+  for (const e of es) {
+    if (e.born - last >= 0.75) firsts.push(e.born);
+    last = e.born;
+  }
+  return firsts;
+};
+const leadOf = (entry) => optionsOf(entry)[0].wave.start;
+
+// Earliest / latest start of every stage over many simulated runs.
+const windows = WAVE_PLAN.map(() => ({ begin: [Infinity, -Infinity], first: [Infinity, -Infinity] }));
+for (let seed = 1; seed <= 120; seed++) {
+  const sp = createSpawner({
+    rng: mulberry32(seed), width: 1000, height: SIM_H, location: 'hands', mode: 'play', duration: 400,
+  });
+  seriesFirsts(drive(sp, 400)).slice(0, WAVE_PLAN.length).forEach((t, k) => {
+    const w = windows[k];
+    const b = t - leadOf(WAVE_PLAN[k]);
+    w.first = [Math.min(w.first[0], t), Math.max(w.first[1], t)];
+    w.begin = [Math.min(w.begin[0], b), Math.max(w.begin[1], b)];
+  });
 }
 const fits = ([loW, hiW], d) => {
   const gate = d - 1.5;
@@ -90,9 +128,7 @@ function simulate(seed, duration) {
   const sp = createSpawner({
     rng: mulberry32(seed), width: 1000, height: 2000, location: 'hands', mode: 'play', duration,
   });
-  const out = [];
-  for (let i = 0; i * CONFIG.STEP < duration; i++) out.push(...sp.update(i * CONFIG.STEP, CONFIG.STEP, 0));
-  return out;
+  return drive(sp, duration);
 }
 // A new series starts when the gap from the previous throw is at least 0.75 s
 // (inside a series throws are at most 0.7 s apart; the lead-in is 0.8 s or more).
@@ -133,7 +169,7 @@ function tripStarts(seed) {
     const sp = createSpawner({
       rng: mulberry32(seed * 7919 + r), width: 1000, height: 2000, location: 'hands', mode: 'play', duration, run,
     });
-    for (let i = 0; i * CONFIG.STEP < duration; i++) sp.update(i * CONFIG.STEP, CONFIG.STEP, 0);
+    drive(sp, duration);
   }
   return starts;
 }
@@ -207,8 +243,10 @@ p(`- Стадия начинается с паузы **«перед»** (жив�
 p('- Затем вылетают серии: все группы серии начинаются одновременно, внутри группы');
 p(`  объекты идут друг за другом каждые **gap** секунд (0 — все вместе): ${gaps} с.`);
 if (noEnd) {
-  p('- Паузы **«после»** нет (как в живой партии Classic, `m_endDelay = 0`): следующая стадия');
-  p('  начинается сразу, как только вылетел последний объект, и ждёт только свою «перед».');
+  p('- Паузы **«после»** нет. Следующая стадия начинается, когда **все объекты прошлой исчезли**');
+  p('  (разрезаны, пойманы или упали за экран), и ждёт только свою «перед». Так ведёт себя');
+  p('  эталонная игра (замер по видео: ~1 с от исчезновения фрукта до следующего броска).');
+  p('  Кто режет быстрее — получает следующие серии раньше.');
 } else {
   p(`- После последнего объекта серии стадия ждёт **${endShort}** («после») — и начинается следующая.`);
 }
@@ -236,7 +274,7 @@ p(`| «Перед» серией (живой \`m_startDelay\`) | ${leadIn} |`);
 p(`| Между объектами внутри серии | ${gaps} с или все вместе (gap 0) |`);
 p(`| Серия целиком | 0–${f(maxSpan)} с (зависит от количества объектов) |`);
 p(`| «После» серии (у всех стадий) | ${endShort} |`);
-p(`| От последнего объекта серии до первого объекта следующей стадии | «после» + «перед»: ${boundaryText} |`);
+p(`| От исчезновения последнего объекта серии до первого объекта следующей стадии | «перед»: ${boundaryText} |`);
 p('| Новые стадии | не начинаются в последние 1.5 с раунда |');
 p('| Новые объекты | не вылетают позже чем за 0.4 с до конца раунда |');
 p('');
@@ -284,7 +322,8 @@ p('');
 
 p('## Когда начинаются стадии');
 p('');
-p('Окно учитывает все варианты наборов: «начало серии» — момент, когда запускается стадия,');
+p('Окно — по 120 смоделированным забегам без нарезки (самый медленный темп): «начало серии» —');
+p('момент, когда стадия запускается (все объекты прошлой исчезли),');
 p('«первый объект» — когда вылетает её первый объект.');
 p('');
 p('| Стадия | Начало серии | Первый объект | В раунде 40 с | В раунде 60 с |');
