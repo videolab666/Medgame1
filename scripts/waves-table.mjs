@@ -94,11 +94,13 @@ function simulate(seed, duration) {
   for (let i = 0; i * CONFIG.STEP < duration; i++) out.push(...sp.update(i * CONFIG.STEP, CONFIG.STEP, 0));
   return out;
 }
+// A new series starts when the gap from the previous throw is at least 0.75 s
+// (inside a series throws are at most 0.7 s apart; the lead-in is 0.8 s or more).
 const seriesCount = (es) => {
   let n = 0;
   let last = -Infinity;
   for (const e of es) {
-    if (e.born - last >= 2) n++;
+    if (e.born - last >= 0.75) n++;
     last = e.born;
   }
   return n;
@@ -152,6 +154,37 @@ const regrow = WAVE_PLAN.find((e) => e.regrow)?.regrow ?? 0;
 const maxSpan = Math.max(...allWaves.flatMap((w) => spanRange(w)[1]));
 const ramp = [0, 1, 2, 3, 4, 5].map((k) => roundSeconds(k)).join(', ');
 
+// Pause values straight from the plan, grouped into ranges for the prose.
+const entryStart = (e) => Math.min(...optionsOf(e).map((o) => o.wave.start));
+const entryEnd = (e) => Math.min(...optionsOf(e).map((o) => o.wave.end));
+const valueRanges = (vals) => {
+  const out = [];
+  let i = 0;
+  while (i < vals.length) {
+    let j = i;
+    while (j + 1 < vals.length && vals[j + 1] === vals[i]) j++;
+    out.push([i + 1, j + 1, vals[i]]);
+    i = j + 1;
+  }
+  return out;
+};
+const stageRange = ([from, to]) => (from === to ? `стадия ${from}`
+  : to === WAVE_PLAN.length ? `стадии ${from} и дальше` : `стадии ${from}–${to}`);
+const leadIn = valueRanges(WAVE_PLAN.map(entryStart))
+  .map((r) => `${stageRange(r)} — ${f(r[2])} с`).join(', ');
+const endVals = [...new Set(WAVE_PLAN.map(entryEnd))];
+const noEnd = endVals.every((v) => v === 0);
+const endShort = noEnd ? 'нет паузы (0 с — как в живой партии)'
+  : `${endVals.map(f).join(' / ')} с`;
+const boundaryText = valueRanges(
+  WAVE_PLAN.slice(0, -1).map((e, i) => entryEnd(e) + entryStart(WAVE_PLAN[i + 1])),
+).map(([from, to, v]) => {
+  const label = from === to ? `${from}→${from + 1}`
+    : to === WAVE_PLAN.length - 1 ? `${from}→${from + 1} и дальше`
+      : `${from}→${from + 1} … ${to}→${to + 1}`;
+  return `${f(v)} с (${label})`;
+}).join(', ');
+
 const lines = [];
 const p = (s = '') => lines.push(s);
 
@@ -170,11 +203,15 @@ p('');
 p('- **Стадия** — один слот плана `WAVE_PLAN`. Раунд начинает не с первой стадии, а с той,');
 p('  на которой остановился прошлый раунд этой локации (первый раунд — с начала); когда');
 p('  список из 23 стадий кончается, повторяется последняя (набор E) — до конца забега.');
-p('- Стадия начинается с паузы **«перед»**: у стадий 1–4 это 0 с, у стадии 5 — 1 с,');
-p('  у стадий 6 и дальше — 0.8 с.');
+p(`- Стадия начинается с паузы **«перед»** (живой \`m_startDelay\`): ${leadIn}.`);
 p('- Затем вылетают серии: все группы серии начинаются одновременно, внутри группы');
 p(`  объекты идут друг за другом каждые **gap** секунд (0 — все вместе): ${gaps} с.`);
-p('- После последнего объекта серии стадия ждёт **5 с** («после») — и начинается следующая.');
+if (noEnd) {
+  p('- Паузы **«после»** нет (как в живой партии Classic, `m_endDelay = 0`): следующая стадия');
+  p('  начинается сразу, как только вылетел последний объект, и ждёт только свою «перед».');
+} else {
+  p(`- После последнего объекта серии стадия ждёт **${endShort}** («после») — и начинается следующая.`);
+}
 p('- Количество объектов `n` — диапазон `мин–макс` включительно; строка «Разброс» — время');
 p('  от первого до последнего объекта серии.');
 p('- Группа бывает трёх видов: обычные бросания (микробы и фрукты), `kind: \'cell\'` — только');
@@ -195,11 +232,11 @@ p('');
 p('| Перерыв | Значение |');
 p('|---|---|');
 p(`| От начала раунда до первого объекта | ${f(FIRST_WAVE_AT)} с |`);
-p('| «Перед» серией: стадии 1–4 / стадия 5 / стадии 6+ | 0 с / 1 с / 0.8 с |');
+p(`| «Перед» серией (живой \`m_startDelay\`) | ${leadIn} |`);
 p(`| Между объектами внутри серии | ${gaps} с или все вместе (gap 0) |`);
 p(`| Серия целиком | 0–${f(maxSpan)} с (зависит от количества объектов) |`);
-p('| «После» серии (у всех стадий) | 5 с |');
-p('| От последнего объекта серии до первого объекта следующей стадии | 5 с (1→2 … 3→4), 6 с (4→5), 5.8 с (5→6 и дальше) |');
+p(`| «После» серии (у всех стадий) | ${endShort} |`);
+p(`| От последнего объекта серии до первого объекта следующей стадии | «после» + «перед»: ${boundaryText} |`);
 p('| Новые стадии | не начинаются в последние 1.5 с раунда |');
 p('| Новые объекты | не вылетают позже чем за 0.4 с до конца раунда |');
 p('');
@@ -240,7 +277,7 @@ for (const g of groups) {
   });
 }
 p('');
-p('«Стадия целиком» — от начала стадии до начала следующей (пауза «перед» + серия + 5 с).');
+p('«Стадия целиком» — от начала стадии до начала следующей («перед» + серия + «после»).');
 const uniqueWeights = [...new Set(WAVE_PLAN.flatMap((e) => optionsOf(e).map((o) => o.weight ?? 0)))];
 p(`Вес — относительная вероятность варианта (значения плана: ${uniqueWeights.join(' / ')}).`);
 p('');

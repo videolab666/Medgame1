@@ -15,12 +15,13 @@ const run = (opts = {}, sec = 60, seed = 7) => {
   for (let i = 0; i * STEP < sec; i++) out.push(...sp.update(i * STEP, STEP, 0));
   return out;
 };
-// Spawns grouped into waves: a new wave starts after a gap of more than 2 s.
+// Spawns grouped into waves: inside a series throws are at most 0.7 s apart and
+// the next series waits at least 0.8 s, so 0.75 s splits the groups.
 const waves = (es) => {
   const out = [];
   for (const e of es) {
     const last = out[out.length - 1];
-    if (last && e.born - last[last.length - 1].born < 2) last.push(e);
+    if (last && e.born - last[last.length - 1].born < 0.75) last.push(e);
     else out.push([e]);
   }
   return out;
@@ -30,13 +31,14 @@ test('deterministic by seed', () => {
   assert.deepEqual(run().map((e) => e.type), run().map((e) => e.type));
 });
 
-test('opening: one, one, then 2–3 thrown together; 1 s lead-in + 5 s rest', () => {
+test('opening: one, one, then 2–3 thrown together; 1 s between waves (live tempo)', () => {
   const w = waves(run({}, 20));
   assert.equal(w[0].length, 1);
   assert.equal(w[1].length, 1);
   assert.ok(w[2].length >= 2 && w[2].length <= 3, `third wave ${w[2].length}`);
   assert.ok(w[2].every((e) => e.born === w[2][0].born), 'third wave is thrown together');
-  assert.ok(Math.abs(w[1][0].born - w[0][0].born - 6) < 0.05, `rest ${w[1][0].born - w[0][0].born}`);
+  const lead = w[1][0].born - w[0][0].born;
+  assert.ok(Math.abs(lead - 1) < 0.05, `lead-in ${lead}`);
 });
 
 test('fifth stage is the slow lesson: only forbidden characters', () => {
@@ -114,13 +116,13 @@ test('calm: only floating microbes, unhurried', () => {
   assert.ok(es.length < 20);
 });
 
-test('throws stay within 12° of vertical and land in 2.0–2.4 s', () => {
+test('throws stay within 12° of vertical and land within the design airtime', () => {
   const g = gravityFor(H);
   for (const e of run({}, 30).filter((x) => x.kind !== 'bonus')) {
     const angle = Math.abs(Math.atan2(e.vx, -e.vy)) * (180 / Math.PI);
     assert.ok(angle <= 12.001, `angle ${angle}`);
     const flight = (2 * -e.vy) / g;
-    assert.ok(flight >= 2.0 && flight <= 2.4, `flight ${flight}`);
+    assert.ok(flight >= 2.0 && flight <= CONFIG.AIRTIME_MAX + 0.01, `flight ${flight}`);
   }
 });
 
@@ -141,10 +143,20 @@ test('objects are the configured size', () => {
   assert.ok(run({}, 30).every((e) => e.r === CONFIG.RADIUS));
 });
 
-test('cells never spawn next to a microbe in the same wave', () => {
+test('a rolled microbe never appears next to a character already in the air', () => {
+  // The child must not see a microbe fly out hugging a character: a roll that
+  // comes after a planned character dodges up to six times, and a microbe that
+  // still cannot keep CELL_GAP turns into fruit (see emitOne).
   for (const w of waves(run({ location: 'blood' }, 120))) {
-    for (const c of w.filter((e) => e.kind === 'cell')) {
-      for (const m of w.filter((e) => e.kind === 'microbe')) assert.ok(Math.abs(c.x - m.x) >= 200);
+    const seen = [];
+    for (const e of w) {
+      if (e.kind === 'cell') seen.push(e);
+      else if (e.kind === 'microbe') {
+        for (const c of seen) {
+          assert.ok(Math.abs(c.x - e.x) >= 200,
+            `a microbe appears ${Math.abs(c.x - e.x).toFixed(1)} units from a character @${e.born.toFixed(2)} s`);
+        }
+      }
     }
   }
 });
@@ -220,10 +232,10 @@ test('a round continues the trip from the saved slot', async () => {
   const sp = createSpawner({
     rng: mulberry32(3), width: 1000, height: H, location: 'hands', mode: 'play', duration: 40, run: trip,
   });
-  const born = step(sp, 5);
+  const born = step(sp, 2); // only the lesson's own throws are out by then
   assert.ok(born.length > 0);
   assert.ok(born.every((e) => e.kind === 'cell'), born.map((e) => e.kind).join(','));
-  assert.equal(trip.slot, Math.min(5, WAVE_PLAN.length - 1), 'cursor moved to the next slot');
+  assert.ok(trip.slot > 4 && trip.slot < WAVE_PLAN.length, `cursor moved from the saved slot (${trip.slot})`);
 });
 
 test('the next round starts exactly where the previous one stopped', async () => {

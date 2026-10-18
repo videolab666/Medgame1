@@ -239,8 +239,8 @@ test('the wave queue waits while the king is on screen', () => {
   assert.ok(r.state.kingActive);
   const kingSpawns = spawns.length;
   assert.equal(spawns[kingSpawns - 1].kind, 'king');
-  // The next wave is due 5 s after the first one; while the king is around
-  // (his own five seconds) nothing new may fly out.
+  // The king freezes the wave clock (round.js): while he is around, nothing
+  // new may fly out.
   for (let i = 0; i < 294; i++) r.update(STEP, []);
   assert.ok(r.state.kingActive, 'king still on screen');
   assert.equal(spawns.length, kingSpawns, 'nothing flies out during the king');

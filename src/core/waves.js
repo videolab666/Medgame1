@@ -5,9 +5,11 @@
 // A slot is either a single wave or a weighted choice between waves. A wave
 // waits `start` seconds, throws its groups (all groups begin together; inside a
 // group objects leave `gap` seconds apart, gap 0 = thrown together), then
-// waits `end` seconds before the next slot. `n` is an inclusive [min, max]
-// count. `ts` slows (or speeds) the flight of that wave's objects; `inc` makes
-// every repeat of the final slot a little faster.
+// waits `end` seconds before the next slot may begin. The live classic list has
+// no end delay at all (m_endDelay = 0), so `END` is 0 and the only pause between
+// slots is the next slot's own `start` — that is the live tempo. `n` is an
+// inclusive [min, max] count. `ts` slows (or speeds) the flight of that wave's
+// objects; `inc` makes every repeat of the final slot a little faster.
 //
 // A group is one of three: a sliceable roll (microbe/fruit), `kind: 'cell'`
 // (characters the child must not touch — the classic bombs), or a `seq`
@@ -19,7 +21,9 @@
 // regrows by `regrow` of its base weight on each later pick, so the same
 // burst rarely repeats back to back.
 
-const END = 5.0;
+// No pause after a series: the live wave list has m_endDelay = 0 (see
+// research/fruit-ninja/OPEN-QUESTIONS.md — question 2.1).
+const END = 0;
 const START = 0.8;
 
 // Stages 1-4: 1 / 1 / 2-3 / 2-3 objects, no characters.

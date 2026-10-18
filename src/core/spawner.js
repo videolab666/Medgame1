@@ -1,6 +1,7 @@
 // Decides what flies out, where and when. Pure and seeded.
-// Throws follow WAVE_PLAN (src/core/waves.js): one object and a long pause,
-// then growing groups, some thrown together, some as quick strings.
+// Throws follow WAVE_PLAN (src/core/waves.js): one object, then growing groups,
+// some thrown together, some as quick strings. The tempo is the live one: the
+// only pause between series is the next series' own short lead-in.
 // Characters the child must not touch ("cells") are never random: they fly
 // out exactly where the plan puts them, in groups or as a mark in a string.
 // The microbe king is spawned by the round, which asks for him right here.
@@ -83,7 +84,10 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
       }
       span = Math.max(span, (n - 1) * g.gap);
     }
-    queue.sort((a, b) => a.t - b.t);
+    // Same-instant throws: characters leave first, so every roll after them
+    // can spread around a character it already knows about.
+    queue.sort((a, b) => a.t - b.t
+      || (a.spec === 'cell' ? -1 : b.spec === 'cell' ? 1 : 0));
     wave.safe = slot < SAFE_SLOTS;
     wave.batch = [];
     nextWaveAt = t0 + span + wave.end;
@@ -135,8 +139,13 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
     return plainKind();
   }
 
+  // A character keeps its distance from every thrown object and vice versa:
+  // any roll (microbe, fruit or bonus) too close to a planned character is
+  // re-placed, and a microbe that still cannot dodge turns into fruit. The
+  // check never looks at which sliceable kind it is, so the random stream —
+  // and with it the whole plan — stays identical in every location.
   const conflicts = (kind, x, list) => list.some((o) => {
-    const pair = (kind === 'cell' && o.kind === 'microbe') || (kind === 'microbe' && o.kind === 'cell');
+    const pair = (kind === 'cell') !== (o.kind === 'cell');
     return pair && Math.abs(o.x - x) < CELL_GAP;
   });
 
