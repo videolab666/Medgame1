@@ -43,6 +43,10 @@ src/ui/       DOM-екрани: меню, HUD, нагорода, атлас, д�
 content/      facts.uk.json — реєстр фактів із джерелами
 ```
 
+## Музика і звуки
+
+Зараз усе звучить процедурно (WebAudio). Записані треки й ефекти підхоплюються автоматично: файли в `public/music/` і `public/sfx/` плюс їхні назви в `index.json`. Промпти для Suno, список назв і інструкція з нарізки: [`docs/music/suno-prompts.md`](docs/music/suno-prompts.md). Кожен файл — запис в `AUDIO_LICENSE.json`.
+
 ## Озвучка
 
 Записані фрази кладуться в `public/voice/<id>.mp3` (id фактів — з `content/facts.uk.json`), а їхні id — у `public/voice/index.json`. Код змінювати не треба.

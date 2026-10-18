@@ -26,6 +26,19 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,json}'],
         navigateFallback: 'index.html',
+        // Music, sound effects and voice are cached on first play, not precached,
+        // so the first visit from a QR code stays light.
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => /\/(music|sfx|voice)\/[^/]+\.mp3$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'mylna-audio',
+              expiration: { maxEntries: 60 },
+              rangeRequests: true,
+            },
+          },
+        ],
       },
     }),
   ],

@@ -1,0 +1,4 @@
+{
+  "note": "Every recorded audio file shipped in public/music, public/sfx or public/voice must be listed here. Example entry: { \"file\": \"music/menu.mp3\", \"source\": \"Suno\", \"url\": \"https://suno.com/song/...\", \"created\": \"2026-10-20\", \"plan\": \"Pro\", \"rights\": \"owned by author under Suno Pro terms\" }",
+  "audio": []
+}

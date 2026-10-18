@@ -27,14 +27,17 @@ import { createEffects } from './fx/effects.js';
 import { applyPost } from './fx/post.js';
 import { createSynth } from './audio/synth.js';
 import { initVoice, playVoice } from './audio/voice.js';
+import { createMusic } from './audio/music.js';
 import { createUI } from './ui/screens.js';
 import factsData from '../content/facts.uk.json';
 
 const facts = factsData.facts;
 const progress = createProgress(localStorageAdapter('mylna-hvylya'));
-const ui = createUI(document.getElementById('ui'), { progress });
 const synth = createSynth();
 synth.setMuted(progress.state.muted);
+const music = createMusic(synth);
+music.setMuted(progress.state.muted);
+const ui = createUI(document.getElementById('ui'), { progress, onTap: () => synth.tap() });
 
 let stage;
 try {
@@ -48,6 +51,11 @@ const [art] = await Promise.all([
   loadArt(256),
   document.fonts?.load('900 52px Nunito').catch(() => {}),
   initVoice(),
+  music.init(),
+  fetch('sfx/index.json')
+    .then((r) => (r.ok ? r.json() : []))
+    .then((list) => synth.setSampleList(list))
+    .catch(() => {}),
 ]);
 
 const particles = createParticles(stage.layers.fx, { max: 2000 });
@@ -64,7 +72,8 @@ const hud = {
 };
 // Light vibration on Android; silent mode turns it off too.
 const haptic = (pattern) => {
-  if (!progress.state.muted && navigator.vibrate) navigator.vibrate(pattern);
+  const touched = navigator.userActivation ? navigator.userActivation.hasBeenActive : true;
+  if (!progress.state.muted && touched && navigator.vibrate) navigator.vibrate(pattern);
 };
 const effects = createEffects({ stage, art, particles, synth, flash, hud, haptic });
 let post = applyPost(stage, 'high');
@@ -131,8 +140,7 @@ function startRound(loc, mode, { interactive = true } = {}) {
     });
   }
   if (tutorial) showGhostHand();
-  synth.stopAmbient();
-  synth.startAmbient(mode === 'calm');
+  music.play(!interactive ? 'menu' : mode === 'calm' ? 'calm' : loc);
 }
 
 function showGhostHand() {
@@ -159,7 +167,7 @@ function finishRound(loc, summary, wasTutorial) {
   lastReward = result;
   scene = 'reward';
   ui.showReward({ sticker: result.sticker, fact, unlocked: result.unlocked, summary });
-  synth.chime();
+  if (!music.jingle('reward')) synth.fanfare();
   if (fact) playVoice(fact.id, { muted: progress.state.muted });
 }
 
@@ -172,6 +180,7 @@ function goTitle() {
 
 function play(loc) {
   synth.unlock();
+  music.unlock();
   if (!progress.isUnlocked(loc)) return;
   currentLoc = loc;
   scene = 'round';
@@ -182,6 +191,7 @@ function play(loc) {
 
 function calm() {
   synth.unlock();
+  music.unlock();
   scene = 'calm';
   startRound(currentLoc, 'calm');
   ui.showCalm();
@@ -223,6 +233,7 @@ ui.on('again', () => {
     lastReward = null;
     scene = 'rest';
     ui.showRest();
+    music.play('rest');
     return;
   }
   play(currentLoc);
@@ -237,6 +248,8 @@ ui.on('mute', () => {
   synth.unlock();
   progress.setMuted(!progress.state.muted);
   synth.setMuted(progress.state.muted);
+  music.setMuted(progress.state.muted);
+  music.unlock();
   ui.setMuteIcon(progress.state.muted);
 });
 
@@ -256,6 +269,7 @@ const canPlay = () => round && round.interactive && !paused && (scene === 'round
 canvas.addEventListener('pointerdown', (ev) => {
   if (!canPlay()) return;
   synth.unlock();
+  music.unlock();
   canvas.setPointerCapture?.(ev.pointerId);
   const p = toWorld(ev);
   swipe.begin(p.x, p.y, now());

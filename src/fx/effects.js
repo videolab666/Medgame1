@@ -91,6 +91,7 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
     }
     particles.emit('juice', e.x, e.y, { color: a.juice ?? 0xffa62b, angle: info.angle });
     particles.emit('sparkle', e.x, e.y, { count: 6 });
+    synth.slice();
     synth.note(info.combo);
     haptic(8);
     vitaminDrop(e.x, e.y, a.juice ?? 0xffa62b);
@@ -111,6 +112,7 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
       ease: 'back.in(1.6)',
       onComplete: () => {
         particles.emit('sparkle', jar.x, jar.y, { count: 6, color });
+        synth.drop();
         hud.bumpJar();
         drop.destroy();
       },
@@ -184,7 +186,7 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
         wave.destroy();
       },
     }));
-    synth.whoosh();
+    synth.wave();
   }
 
   function showDome(center) {
@@ -202,7 +204,7 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
     fx.addChild(dome);
     T(gsap.to(dome.scale, { x: 1, y: 1, duration: 0.5, ease: 'back.out(2.5)' }));
     T(gsap.to(glow, { alpha: 0.6, duration: 0.7, yoyo: true, repeat: -1, ease: 'sine.inOut' }));
-    synth.chime();
+    synth.shield();
   }
 
   function hideDome() {
@@ -219,7 +221,7 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
     tint.alpha = 0;
     stage.layers.bg.addChild(tint);
     T(gsap.to(tint, { alpha: 0.35, duration: 0.5 }));
-    synth.chime();
+    synth.slow();
   }
 
   function hideSlowTint() {
@@ -253,7 +255,7 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
         hud.comboPopup(n);
         haptic([10, 40, 10]);
         particles.emit('sparkle', stage.width / 2, stage.height * 0.4, { count: 10 + n * 2, spread: 400 });
-        synth.chime();
+        synth.combo();
         softFlash(0.12 + Math.min(n, 10) * 0.006);
       });
       round.on('bonus', (type, e, effect) => {
@@ -274,7 +276,7 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
       });
       round.on('end', () => {
         particles.emit('starRain', stage.width);
-        synth.chime();
+        synth.sparkle();
       });
     },
     update(dt) {

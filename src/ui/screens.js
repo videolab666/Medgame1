@@ -25,7 +25,7 @@ const BONUS_WORDS = {
 const img = (key, cls = '') => `<img class="${cls}" alt="" draggable="false" src="${svgDataUrl(fullSvg(key))}">`;
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
-export function createUI(root, { progress }) {
+export function createUI(root, { progress, onTap = () => {} }) {
   const listeners = new Map();
   const emit = (name, ...a) => (listeners.get(name) ?? []).forEach((fn) => fn(...a));
   let screen = null;
@@ -43,6 +43,7 @@ export function createUI(root, { progress }) {
       const btn = ev.target.closest('[data-act]');
       if (!btn || btn.disabled) return;
       gsap.fromTo(btn, { scale: 0.92 }, { scale: 1, duration: 0.35, ease: 'back.out(3)' });
+      onTap();
       emit(btn.dataset.act, btn.dataset.arg);
     });
     gsap.from(screen.querySelectorAll('.pop'), { scale: 0.6, opacity: 0, duration: 0.5, stagger: 0.06, ease: 'back.out(2.2)' });

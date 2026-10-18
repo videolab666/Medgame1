@@ -72,8 +72,23 @@ if (existsSync('src/render/art.js')) {
   }
 }
 
+// Audio license registry: every listed music/sfx/voice file needs an entry.
+const audioLicense = JSON.parse(await readFile('AUDIO_LICENSE.json', 'utf8'));
+const audioFiles = new Map(audioLicense.audio.map((a) => [a.file, a]));
+for (const dir of ['music', 'sfx', 'voice']) {
+  const index = `public/${dir}/index.json`;
+  if (!existsSync(index)) continue;
+  for (const name of JSON.parse(await readFile(index, 'utf8'))) {
+    const file = `${dir}/${name}.mp3`;
+    if (!existsSync(`public/${file}`)) errors.push(`${index}: lists "${name}" but public/${file} is missing`);
+    const lic = audioFiles.get(file);
+    if (!lic) errors.push(`${file}: not listed in AUDIO_LICENSE.json`);
+    else if (!lic.source || !lic.rights) errors.push(`${file}: AUDIO_LICENSE entry needs source and rights`);
+  }
+}
+
 if (errors.length) {
   console.error(errors.map((e) => `✗ ${e}`).join('\n'));
   process.exit(1);
 }
-console.log(`✓ ${facts.length} facts, ${license.art.length} art entries — all checks passed`);
+console.log(`✓ ${facts.length} facts, ${license.art.length} art entries, ${audioLicense.audio.length} audio entries — all checks passed`);
