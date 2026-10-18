@@ -1,5 +1,5 @@
 // Pixi application, world container and layers. The world is measured in
-// game units: the short side (or 62 % of height on wide screens) is 1000 units.
+// game units: the short side of the screen is 1000 units.
 import { Application, Container } from 'pixi.js';
 
 export async function createStage(root) {
@@ -29,7 +29,7 @@ export async function createStage(root) {
 
   function layout() {
     const { width, height } = app.screen;
-    stage.scale = Math.min(width, height * 0.62) / 1000;
+    stage.scale = Math.min(width, height) / 1000;
     stage.width = width / stage.scale;
     stage.height = height / stage.scale;
     world.scale.set(stage.scale);

@@ -35,10 +35,11 @@ function paintProps(ctx, location, w, h) {
       ctx.stroke();
     }
   } else if (location === 'kitchen') {
-    const x = w * 0.58;
+    const s = Math.min(w, h);
+    const ww = s * 0.34;
+    const wh = s * 0.42;
+    const x = w - ww - s * 0.08;
     const y = h * 0.07;
-    const ww = w * 0.34;
-    const wh = h * 0.2;
     ctx.fillStyle = 'rgba(255,255,255,0.65)';
     ctx.beginPath();
     ctx.roundRect(x, y, ww, wh, 18);
