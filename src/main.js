@@ -86,6 +86,9 @@ let scene = 'title';
 let currentLoc = progress.lastUnlocked();
 let paused = false;
 let acc = 0;
+// Reward screen appears a moment after the round ends (counted in game time,
+// so background-tab timer throttling cannot delay or skip it).
+let pendingFinish = null;
 let lastReward = null;
 let ghost = null;
 const swipe = createSwipe({ minSpeed: CONFIG.SWIPE_MIN_SPEED });
@@ -104,6 +107,7 @@ function teardown() {
     ghost = null;
   }
   round = null;
+  pendingFinish = null;
   paused = false;
   acc = 0;
 }
@@ -136,7 +140,7 @@ function startRound(loc, mode, { interactive = true } = {}) {
   if (mode === 'play') {
     round.on('end', (summary) => {
       ui.hideHud();
-      setTimeout(() => finishRound(loc, summary, tutorial), 1500);
+      pendingFinish = { in: 1.5, args: [loc, summary, tutorial] };
     });
   }
   if (tutorial) showGhostHand();
@@ -328,6 +332,14 @@ stage.app.ticker.add((ticker) => {
         score: round.state.score,
         calm: scene === 'calm',
       });
+    }
+  }
+  if (pendingFinish && !paused) {
+    pendingFinish.in -= dt;
+    if (pendingFinish.in <= 0) {
+      const { args } = pendingFinish;
+      pendingFinish = null;
+      finishRound(...args);
     }
   }
   if (!paused) {

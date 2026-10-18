@@ -93,7 +93,7 @@ sunny funky kids kitchen music, 112 BPM, F major, ukulele strum, xylophone melod
 [Outro: loopable groove]
 ```
 
-### 1.4 `blood.mp3` — «Річка крові»
+### 1.4 `blood.mp3` — «Клітинкова річка»
 **Title:** Little River Journey
 
 **Style:**

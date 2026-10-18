@@ -8,7 +8,7 @@ import { CONFIG, LOCATION_ORDER } from '../core/config.js';
 export const LOCATION_INFO = {
   hands: { name: 'Долоньки', icon: 'soap', hint: 'Мий мікробів!' },
   kitchen: { name: 'Кухня вітамінів', icon: 'orange', hint: 'Збирай вітаміни!' },
-  blood: { name: 'Річка крові', icon: 'chervonya', hint: 'Не чіпай своїх!' },
+  blood: { name: 'Клітинкова річка', icon: 'chervonya', hint: 'Не чіпай своїх!' },
   mouth: { name: 'Ротик', icon: 'zubchyk', hint: 'Бережи зубки!' },
   tummy: { name: 'Животик', icon: 'dobryk', hint: 'Добрика не чіпай!' },
   skin: { name: 'Шкіра', icon: 'hat', hint: 'Шкіра — наш щит!' },

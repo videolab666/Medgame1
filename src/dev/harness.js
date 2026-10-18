@@ -50,4 +50,35 @@ export function installHarness(game) {
       : { scene: game.scene };
   };
   window.__click = (sel) => document.querySelector(sel)?.click();
+
+  // Errors seen since the last __playLoc report.
+  window.__errs = [];
+  addEventListener('error', (e) => window.__errs.push(e.message));
+  addEventListener('unhandledrejection', (e) => window.__errs.push(String(e.reason)));
+
+  // Plays one full round in a location with the bot and reports the outcome.
+  window.__playLoc = async (loc) => {
+    if (game.scene !== 'title') {
+      window.__click('[data-act=menu]');
+      await window.__fast(1);
+    }
+    await window.__fast(0.5);
+    const card = document.querySelector(`.loc-card[data-arg=${loc}]`);
+    if (card?.dataset.act !== 'play') return { loc, error: `locked: ${card?.textContent.trim()}` };
+    card.click();
+    const types = new Set();
+    let bonuses = 0;
+    game.round.on('bonus', () => bonuses++);
+    for (let i = 0; i < 32; i++) {
+      await window.__fast(2, true);
+      game.round?.state.entities.forEach((e) => types.add(`${e.kind[0]}:${e.type}`));
+    }
+    await window.__fast(2);
+    const text = (sel) => document.querySelector(sel)?.textContent.replace(/\s+/g, ' ').trim() ?? null;
+    return {
+      loc, bonuses, types: [...types].sort().join(' '), scene: game.scene,
+      sticker: text('.sticker-name'), badge: text('.badge'), fact: text('.fact p'), unlock: text('.unlock'),
+      stats: text('.stats'), errs: window.__errs.splice(0),
+    };
+  };
 }
