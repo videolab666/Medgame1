@@ -505,7 +505,7 @@ goTitle();
 
 // Dev-only handle for in-browser checks (stripped from production builds).
 if (import.meta.env.DEV) {
-  window.__game = { get round() { return round; }, get scene() { return scene; }, progress, stage, gsap, get post() { return post; } };
+  window.__game = { get round() { return round; }, get scene() { return scene; }, progress, stage, gsap, music, get post() { return post; } };
   if (new URLSearchParams(window.location.search).has('harness')) {
     import('./dev/harness.js').then((m) => m.installHarness(window.__game));
   }

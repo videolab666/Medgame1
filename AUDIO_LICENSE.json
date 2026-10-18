@@ -1,4 +1,11 @@
 {
   "note": "Every recorded audio file shipped in public/music, public/sfx or public/voice must be listed here. Example entry: { \"file\": \"music/menu.mp3\", \"source\": \"Suno\", \"url\": \"https://suno.com/song/...\", \"created\": \"2026-10-20\", \"plan\": \"Pro\", \"rights\": \"owned by author under Suno Pro terms\" }",
-  "audio": []
+  "audio": [
+    {
+      "file": "music/main.mp3",
+      "source": "Файл автора проєкту (hospital-game/main.mp3), 18.10.2026; перекодовано 128 kbps з лімітером −1 dBFS",
+      "created": "2026-10-18",
+      "rights": "Право використання підтверджує автор проєкту — уточнити джерело (напр. Suno, план підписки) перед показом лікарні"
+    }
+  ]
 }

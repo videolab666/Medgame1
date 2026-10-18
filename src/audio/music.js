@@ -4,10 +4,18 @@
 import gsap from 'gsap';
 
 export const MUSIC_NAMES = Object.freeze([
-  'menu', 'hands', 'kitchen', 'blood', 'mouth', 'tummy', 'skin', 'calm', 'rest', 'reward',
+  'main', 'menu', 'hands', 'kitchen', 'blood', 'mouth', 'tummy', 'skin', 'calm', 'rest', 'reward',
 ]);
 
+// `main` is the shared background track: it plays wherever a scene has no
+// track of its own — except the calm mode, which keeps its quiet breathing pad.
+const SHARED = 'main';
+const NO_SHARED = new Set(['calm']);
 const VOLUME = 0.35;
+// Per-track loudness: the shared track is mastered loud, so it plays at half
+// volume to leave room for the sound effects.
+const VOLUMES = { main: 0.5 };
+const volumeOf = (name) => VOLUMES[name] ?? VOLUME;
 
 export function createMusic(synth) {
   let available = new Set();
@@ -29,8 +37,15 @@ export function createMusic(synth) {
         available = new Set();
       }
     },
+    // Name of the track (or pad) playing now, plus its current volume.
+    get playing() {
+      return { name: currentName, volume: current ? current.volume : null, file: current?.src ?? null };
+    },
     // Loop a scene track; falls back to the synth pad (calm flavour for calm/rest).
-    play(name) {
+    play(scene) {
+      const name = available.has(scene) ? scene
+        : !NO_SHARED.has(scene) && available.has(SHARED) ? SHARED : scene;
+      // The same file keeps playing across scenes (no restart on every round).
       if (name === currentName) return;
       currentName = name;
       if (current) fadeOut(current);
@@ -46,7 +61,7 @@ export function createMusic(synth) {
       current = audio;
       if (!muted) {
         audio.play().catch(() => {});
-        gsap.to(audio, { volume: VOLUME, duration: 1.2 });
+        gsap.to(audio, { volume: volumeOf(name), duration: 1.2 });
       }
     },
     // Short one-shot jingle (reward screen) on top of a ducked loop.
@@ -56,8 +71,9 @@ export function createMusic(synth) {
       audio.volume = 0.6;
       audio.play().catch(() => {});
       if (current) {
-        gsap.to(current, { volume: VOLUME * 0.3, duration: 0.3 });
-        audio.addEventListener('ended', () => current && gsap.to(current, { volume: VOLUME, duration: 0.8 }), { once: true });
+        const v = volumeOf(currentName);
+        gsap.to(current, { volume: v * 0.3, duration: 0.3 });
+        audio.addEventListener('ended', () => current && gsap.to(current, { volume: v, duration: 0.8 }), { once: true });
       }
       return true;
     },
@@ -73,14 +89,14 @@ export function createMusic(synth) {
       if (b) current.pause();
       else {
         current.play().catch(() => {});
-        gsap.to(current, { volume: VOLUME, duration: 0.6 });
+        gsap.to(current, { volume: volumeOf(currentName), duration: 0.6 });
       }
     },
     // Browsers start audio only after a user gesture.
     unlock() {
       if (current && current.paused && !muted) {
         current.play().catch(() => {});
-        gsap.to(current, { volume: VOLUME, duration: 0.8 });
+        gsap.to(current, { volume: volumeOf(currentName), duration: 0.8 });
       }
     },
   };
