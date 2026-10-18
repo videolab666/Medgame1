@@ -9,7 +9,7 @@ import './ui/styles.css';
 import gsap from 'gsap';
 import { Sprite } from 'pixi.js';
 
-import { CONFIG } from './core/config.js';
+import { CONFIG, roundSeconds } from './core/config.js';
 import { createRound } from './core/round.js';
 import { createSwipe } from './core/swipe.js';
 import { createProgress, localStorageAdapter } from './core/progress.js';
@@ -91,6 +91,8 @@ let acc = 0;
 let pendingFinish = null;
 let lastReward = null;
 let ghost = null;
+// Location pre-selected behind the "how to play" card before the first round.
+let introLoc = null;
 const swipe = createSwipe({ minSpeed: CONFIG.SWIPE_MIN_SPEED });
 
 function teardown() {
@@ -115,6 +117,8 @@ function teardown() {
 function startRound(loc, mode, { interactive = true } = {}) {
   teardown();
   const tutorial = mode === 'play' && !progress.state.tutorialDone;
+  // Rounds start short (40 s) and grow +5 s per completed round up to 60 s.
+  const duration = mode === 'calm' ? CONFIG.ROUND_SEC : roundSeconds(progress.state.rounds[loc] ?? 0);
   background = createBackground(stage, mode === 'calm' && interactive ? 'calm' : loc);
   round = createRound({
     seed: (Date.now() ^ (Math.random() * 1e9)) >>> 0,
@@ -123,6 +127,7 @@ function startRound(loc, mode, { interactive = true } = {}) {
     location: loc,
     mode,
     tutorial,
+    duration,
   });
   round.interactive = interactive;
   round.on('spawn', (e) => {
@@ -208,7 +213,22 @@ function pause() {
 }
 
 // ------------------------------------------------------------------ UI events
-ui.on('play', (loc) => play(loc));
+ui.on('play', (loc) => {
+  // First visit to a location: show what to wash, collect and leave alone.
+  if (!(progress.state.rounds[loc] > 0)) {
+    introLoc = loc;
+    synth.unlock();
+    ui.showIntro('start', loc);
+    return;
+  }
+  play(loc);
+});
+ui.on('how', () => ui.showIntro('info', currentLoc));
+ui.on('intro-go', () => {
+  const loc = introLoc;
+  introLoc = null;
+  if (loc) play(loc);
+});
 ui.on('locked', () => synth.giggle());
 ui.on('calm', calm);
 ui.on('atlas', () => {
@@ -327,7 +347,8 @@ stage.app.ticker.add((ticker) => {
     trail.setCombo(round.state.combo);
     if (scene === 'round' || scene === 'calm') {
       ui.updateHud({
-        remaining: CONFIG.ROUND_SEC - round.state.time,
+        remaining: round.state.duration - round.state.time,
+        total: round.state.duration,
         vitamins: round.state.vitamins,
         score: round.state.score,
         calm: scene === 'calm',

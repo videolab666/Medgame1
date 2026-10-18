@@ -66,6 +66,13 @@ export function installHarness(game) {
     const card = document.querySelector(`.loc-card[data-arg=${loc}]`);
     if (card?.dataset.act !== 'play') return { loc, error: `locked: ${card?.textContent.trim()}` };
     card.click();
+    // The very first playthrough shows the "what to slice" card first.
+    await window.__fast(0.3);
+    const intro = document.querySelector('[data-act=intro-go]');
+    if (intro) {
+      intro.click();
+      await window.__fast(0.3);
+    }
     const types = new Set();
     let bonuses = 0;
     game.round.on('bonus', () => bonuses++);

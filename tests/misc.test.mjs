@@ -26,6 +26,15 @@ test('quality tiers', () => {
   assert.equal(pickQuality(20), 'low');
 });
 
+test('round duration grows with experience', async () => {
+  const { roundSeconds, CONFIG } = await import('../src/core/config.js');
+  assert.equal(roundSeconds(0), 40);
+  assert.equal(roundSeconds(1), 45);
+  assert.equal(roundSeconds(3), 55);
+  assert.equal(roundSeconds(4), CONFIG.ROUND_SEC);
+  assert.equal(roundSeconds(99), CONFIG.ROUND_SEC);
+});
+
 test('flashGuard enforces 400 ms', () => {
   let t = 0;
   const g = createFlashGuard(400, () => t);

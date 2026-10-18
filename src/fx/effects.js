@@ -4,7 +4,7 @@
 import { Container, FillGradient, Graphics, Sprite, Text } from 'pixi.js';
 import gsap from 'gsap';
 import { haloTexture } from '../render/textures.js';
-import { CONFIG } from '../core/config.js';
+import { CONFIG, gravityFor } from '../core/config.js';
 
 const GIGGLES = ['лоскотно!', 'хі-хі!', 'ой, свої!', 'я свій!'];
 
@@ -284,7 +284,7 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
       for (let i = flying.length - 1; i >= 0; i--) {
         const f = flying[i];
         f.age += dt;
-        f.vy += CONFIG.GRAVITY * 0.8 * dt;
+        f.vy += gravityFor(stage.height) * 0.8 * dt;
         f.node.x += f.vx * dt;
         f.node.y += f.vy * dt;
         f.node.rotation += f.spin * dt;

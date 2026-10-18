@@ -143,6 +143,19 @@ test('play round ends exactly once with summary', () => {
   assert.ok('vitamins' in sum && 'bestCombo' in sum && 'score' in sum);
 });
 
+test('custom duration ends the round on time and stops spawning', () => {
+  const r = mk({ duration: 40 });
+  assert.equal(r.state.duration, 40);
+  let at = null;
+  let late = 0;
+  r.on('end', () => { at = r.state.time; });
+  r.on('spawn', (e) => { if (e.born >= 40) late++; });
+  for (let i = 0; i < 41 * 60; i++) r.update(STEP, []);
+  assert.ok(r.state.ended);
+  assert.ok(at !== null && at < 40 + 2 * STEP, `ended at ${at}`);
+  assert.equal(late, 0);
+});
+
 test('calm never ends', () => {
   const r = mk({ mode: 'calm' });
   let n = 0;

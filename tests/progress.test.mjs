@@ -4,7 +4,7 @@ import { createProgress, memoryStorage, STICKERS } from '../src/core/progress.js
 import { mulberry32 } from '../src/core/rng.js';
 
 test('only hands unlocked at start; kitchen after 3 rounds', () => {
-  const p = createProgress(memoryStorage());
+  const p = createProgress(memoryStorage(), { unlockAll: false });
   assert.ok(p.isUnlocked('hands') && !p.isUnlocked('kitchen'));
   let u = null;
   for (let i = 0; i < 3; i++) u = p.completeRound('hands', mulberry32(i)).unlocked;
@@ -63,7 +63,7 @@ test('8 stickers per location, ids unique', () => {
 
 test('locations unlock in a chain of six', async () => {
   const { LOCATION_ORDER } = await import('../src/core/config.js');
-  const p = createProgress(memoryStorage());
+  const p = createProgress(memoryStorage(), { unlockAll: false });
   const opened = [];
   for (const loc of LOCATION_ORDER) {
     assert.ok(p.isUnlocked(loc), loc);
@@ -78,7 +78,14 @@ test('locations unlock in a chain of six', async () => {
 test('old saves with three locations load fine', () => {
   const st = memoryStorage();
   st.save({ version: 1, rounds: { hands: 3, kitchen: 3, blood: 1 }, stickers: {}, sinceRest: 0, muted: false, seenFacts: {}, tutorialDone: true });
-  const p = createProgress(st);
+  const p = createProgress(st, { unlockAll: false });
   assert.equal(p.state.rounds.mouth, 0);
   assert.ok(!p.isUnlocked('mouth'));
+});
+
+test('all locations are open by default', async () => {
+  const { LOCATION_ORDER } = await import('../src/core/config.js');
+  const p = createProgress(memoryStorage());
+  assert.ok(LOCATION_ORDER.every((l) => p.isUnlocked(l)));
+  assert.equal(p.completeRound('hands', mulberry32(1)).unlocked, null);
 });

@@ -61,7 +61,7 @@ export function localStorageAdapter(key) {
   };
 }
 
-export function createProgress(storage) {
+export function createProgress(storage, { unlockAll = CONFIG.UNLOCK_ALL } = {}) {
   const loaded = storage.load();
   const base = defaults();
   const state = loaded && loaded.version === 1
@@ -71,6 +71,7 @@ export function createProgress(storage) {
 
   const isUnlocked = (loc) => {
     const i = LOCATION_ORDER.indexOf(loc);
+    if (unlockAll) return i >= 0;
     if (i <= 0) return i === 0;
     return state.rounds[LOCATION_ORDER[i - 1]] >= CONFIG.UNLOCK_AFTER;
   };

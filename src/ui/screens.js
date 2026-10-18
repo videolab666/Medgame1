@@ -3,7 +3,7 @@
 import gsap from 'gsap';
 import { ART, fullSvg, svgDataUrl } from '../render/art.js';
 import { STICKERS } from '../core/progress.js';
-import { CONFIG, LOCATION_ORDER } from '../core/config.js';
+import { CONFIG, LOCATION_ORDER, typesFor } from '../core/config.js';
 
 export const LOCATION_INFO = {
   hands: { name: 'Долоньки', icon: 'soap', hint: 'Мий мікробів!' },
@@ -12,6 +12,15 @@ export const LOCATION_INFO = {
   mouth: { name: 'Ротик', icon: 'zubchyk', hint: 'Бережи зубки!' },
   tummy: { name: 'Животик', icon: 'dobryk', hint: 'Добрика не чіпай!' },
   skin: { name: 'Шкіра', icon: 'hat', hint: 'Шкіра — наш щит!' },
+};
+
+// Why a friendly character must not be touched, per character.
+const FRIEND_NOTE = {
+  chervonya: 'Вони захищають тіло',
+  bilyk: 'Вони захищають тіло',
+  latochka: 'Вони латають ранки',
+  zubchyk: 'Зубчик — твій друг',
+  dobryk: 'Добрик — корисна бактерія',
 };
 
 const COMBO_WORDS = { 3: 'Супер!', 5: 'Чудово!', 10: 'Неймовірно!' };
@@ -95,6 +104,7 @@ export function createUI(root, { progress, onTap = () => {} }) {
           <div class="row">
             <button class="mid-btn calm pop" data-act="calm">🫧 Перед процедурою</button>
             <button class="mid-btn atlas pop" data-act="atlas">📒 Атлас тіла</button>
+            <button class="mid-btn how pop" data-act="how">👆 Як грати?</button>
           </div>
           <button class="link-btn pop" data-act="parents">Для батьків</button>
         </div>`,
@@ -119,10 +129,10 @@ export function createUI(root, { progress, onTap = () => {} }) {
       root.append(hud);
     },
 
-    updateHud({ remaining, vitamins, score, calm }) {
+    updateHud({ remaining, total, vitamins, score, calm }) {
       if (!hud) return;
       const bar = hud.querySelector('.bar');
-      const frac = calm ? 1 : Math.max(0, remaining) / CONFIG.ROUND_SEC;
+      const frac = calm ? 1 : Math.max(0, remaining) / (total || CONFIG.ROUND_SEC);
       bar.style.strokeDashoffset = String(163.4 * (1 - frac));
       hud.querySelector('.timer').classList.toggle('hidden', !!calm);
       hud.querySelector('.jar').classList.toggle('hidden', !!calm);
@@ -193,6 +203,38 @@ export function createUI(root, { progress, onTap = () => {} }) {
       );
       const st = screen.querySelector('.sticker-img');
       gsap.fromTo(st, { y: -260, rotation: -25 }, { y: 0, rotation: 0, duration: 1, ease: 'bounce.out', delay: 0.2 });
+    },
+
+    // "What to slice" card: shown before the very first round ('start') and
+    // from the title screen ('info'). Pictograms instead of long text for 5-9.
+    // "How to play" card: shown before the first round in each location and
+    // from the title screen. Pictures carry the meaning for kids who can't read
+    // yet; the characters are the ones of that location.
+    showIntro(mode = 'start', loc = 'hands') {
+      hideHud();
+      const pools = typesFor(loc);
+      const friend = FRIEND_NOTE[pools.cell[0]] ?? 'Вони захищають тіло';
+      const row = (arts, title, sub, ok) => `
+        <div class="how-row pop">
+          <div class="how-imgs">${arts.map((a) => img(a, 'how-img')).join('')}</div>
+          <div class="how-text"><b>${title}</b><span>${sub}</span></div>
+          <span class="how-mark ${ok ? 'ok' : 'no'}">${ok ? '✓' : '✕'}</span>
+        </div>`;
+      mount(
+        `<div class="card howto">
+          <h2 class="pop">Як грати?</h2>
+          <p class="how-loc pop">${LOCATION_INFO[loc].name}</p>
+          ${row(pools.microbe.slice(0, 2), 'Мий мікробів!', 'Проведи пальцем — і в бульбашку', true)}
+          ${row(pools.fruit.slice(0, 2), 'Збирай вітаміни!', 'Фрукти — у баночку', true)}
+          ${row(pools.cell.slice(0, 2), 'Своїх не чіпай!', friend, false)}
+          ${row(pools.bonus, 'Лови бонуси!', 'Вони допомагають', true)}
+          <div class="row">
+            <button class="big-btn pop" data-act="${mode === 'start' ? 'intro-go' : 'menu'}">${mode === 'start' ? 'Грати!' : 'Добре'}</button>
+            ${mode === 'start' ? '<button class="mid-btn pop" data-act="menu">До меню</button>' : ''}
+          </div>
+        </div>`,
+        'overlay',
+      );
     },
 
     showRest() {
@@ -270,7 +312,7 @@ export function createUI(root, { progress, onTap = () => {} }) {
           <ul>
             <li>Без реклами, покупок і реєстрації.</li>
             <li>Гра не збирає жодних даних. Прогрес зберігається лише на цьому телефоні.</li>
-            <li>Раунд триває одну хвилину. Кожні три раунди гра пропонує перепочити.</li>
+            <li>Перші раунди короткі (близько 40 секунд) і поступово подовжуються до хвилини. Кожні три раунди гра пропонує перепочити.</li>
             <li>Режим «Перед процедурою» допомагає заспокоїтися — дихайте разом з дитиною.</li>
             <li>Факти про здоров'я взято з відкритих джерел (ВООЗ, CDC, MedlinePlus, USDA). Вони чекають на перевірку лікарем.</li>
             <li>Гра не замінює пораду лікаря.</li>

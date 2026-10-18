@@ -1,6 +1,8 @@
 // Entity motion. Thrown objects follow ballistic arcs; calm-mode bubbles float up.
 
-export function stepEntity(e, dt, gravity) {
+export function stepEntity(e, dtIn, gravity) {
+  // Per-object time scale: some waves fly slower (or faster) than others.
+  const dt = dtIn * (e.ts ?? 1);
   e.age += dt;
   if (e.float) {
     e.y += e.vy * dt;

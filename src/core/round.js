@@ -6,14 +6,14 @@ import { createSpawner } from './spawner.js';
 import { stepEntity, isOffscreen } from './physics.js';
 import { segmentHitsCircle } from './swipe.js';
 
-export function createRound({ seed, width, height, location, mode, tutorial }) {
+export function createRound({ seed, width, height, location, mode, duration = CONFIG.ROUND_SEC }) {
   const rng = mulberry32(seed);
-  const spawner = createSpawner({ rng, width, height, location, mode, tutorial });
+  const spawner = createSpawner({ rng, width, height, location, mode, duration });
   const listeners = new Map();
   const calm = mode === 'calm';
   const state = {
     time: 0, entities: [], combo: 0, bestCombo: 0, score: 0, vitamins: 0,
-    slow: 0, shield: 0, ended: false, mode, location, width, height,
+    slow: 0, shield: 0, ended: false, mode, location, width, height, duration,
   };
   const shieldCenter = { x: width / 2, y: height * 0.5 };
 
@@ -127,7 +127,7 @@ export function createRound({ seed, width, height, location, mode, tutorial }) {
 
       const motionDt = state.slow > 0 ? dt * CONFIG.SLOW_SCALE : dt;
       for (const e of state.entities) {
-        stepEntity(e, motionDt, CONFIG.GRAVITY);
+        stepEntity(e, motionDt, spawner.gravity);
         if (e.cooldown > 0) e.cooldown -= dt;
       }
 
@@ -148,7 +148,7 @@ export function createRound({ seed, width, height, location, mode, tutorial }) {
       }
       state.entities = kept;
 
-      if (!calm && !state.ended && state.time >= CONFIG.ROUND_SEC) {
+      if (!calm && !state.ended && state.time >= state.duration) {
         state.ended = true;
         emit('end', { score: state.score, vitamins: state.vitamins, bestCombo: state.bestCombo });
       }
