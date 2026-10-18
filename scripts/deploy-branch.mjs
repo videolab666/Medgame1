@@ -52,5 +52,8 @@ try {
     console.log(`✓ Published build of ${sha} to ${BRANCH}`);
   }
 } finally {
-  await rm(dir, { recursive: true, force: true });
+  // Windows may still hold handles from the git child processes for a moment.
+  await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 }).catch(() => {
+    console.warn(`(temp folder left behind: ${dir})`);
+  });
 }
