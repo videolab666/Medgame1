@@ -118,7 +118,7 @@ test('shield expires with bonusEnd', () => {
   r.update(STEP, cut(200, 200));
   for (let i = 0; i < 6 * 60; i++) r.update(STEP, []);
   assert.equal(r.state.shield, 0);
-  assert.deepEqual(ended, ['vaccine']);
+  assert.deepEqual(ended, ['shield']);
 });
 
 test('patch slows entities', () => {
@@ -159,4 +159,15 @@ test('spawned entities emit spawn and offscreen ones emit remove', () => {
   r.on('remove', () => removed++);
   for (let i = 0; i < 20 * 60; i++) r.update(STEP, []);
   assert.ok(spawned > 0 && removed > 0);
+});
+
+test('toothbrush acts as a cleaning wave', () => {
+  const r = mk({ location: 'mouth' });
+  const fx = [];
+  r.on('bonus', (type, e, effect) => fx.push(effect));
+  r._inject(ent('microbe', 'kysliuk', 100, 300));
+  r._inject(ent('bonus', 'toothbrush', 500, 800));
+  r.update(STEP, cut(500, 800));
+  assert.deepEqual(fx, ['wave']);
+  assert.equal(r.state.score, 1);
 });

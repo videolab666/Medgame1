@@ -437,6 +437,7 @@ const carrot = {
   name: 'Морквинка',
   line: 'З неї тіло робить вітамін А для очей.',
   flesh: '#ffb066',
+  juice: 0xff8a1c,
   body: () =>
     wrap(
       `<path d="M 70 46 Q 130 40 136 62 L 92 182 Q 84 186 80 178 L 62 66 Q 60 50 70 46 Z" fill="url(#g)" stroke="#d65a00" stroke-width="5"/>` +
@@ -502,6 +503,185 @@ const shield = {
     ),
 };
 
+// ---------------------------------------------------------------- mouth
+
+const zubchyk = {
+  name: 'Зубчик',
+  line: 'Любить, коли його чистять двічі на день.',
+  eyeY: 84,
+  body: () =>
+    wrap(
+      `<path d="M 52 40 Q 76 22 100 36 Q 124 22 148 40 Q 170 60 160 104 Q 154 134 146 170 Q 140 186 128 176 Q 118 140 100 140 Q 82 140 72 176 Q 60 186 54 170 Q 46 134 40 104 Q 30 60 52 40 Z" fill="url(#g)" stroke="#9fb7d6" stroke-width="5" stroke-linejoin="round"/>` +
+        gloss(72, 58) +
+        blush(108, 38) +
+        smile(110, 16) +
+        `<path d="M 118 46 l 4 -10 l 4 10 l 10 4 l -10 4 l -4 10 l -4 -10 l -10 -4 Z" fill="#8fe3f7"/>`,
+      radial('g', '#ffffff', '#f4f8ff', '#c9d8ee') + SHINE,
+    ),
+  eyes: () => wrap(eyePair(84, { gap: 22, r: 13 })),
+};
+
+const toothbrush = {
+  name: 'Щіточка',
+  line: 'Чисть зубки дві хвилини — вранці та ввечері.',
+  body: () =>
+    wrap(
+      `<g transform="rotate(-35 100 100)">` +
+        `<rect x="22" y="92" width="120" height="22" rx="11" fill="url(#g)" stroke="#2f8fb8" stroke-width="4"/>` +
+        `<rect x="132" y="84" width="46" height="34" rx="10" fill="#ffffff" stroke="#2f8fb8" stroke-width="4"/>` +
+        [138, 148, 158, 168]
+          .map((x, i) => `<rect x="${x}" y="56" width="7" height="30" rx="3" fill="${i % 2 ? '#ffffff' : '#8fe3f7'}" stroke="#2f8fb8" stroke-width="2"/>`)
+          .join('') +
+        `<circle cx="150" cy="46" r="12" fill="#ffffff" stroke="#9fd8ff" stroke-width="3"/>` +
+        `<circle cx="168" cy="40" r="8" fill="#ffffff" stroke="#9fd8ff" stroke-width="3"/>` +
+        gloss(54, 98, 20, 5, 0) +
+        `</g>`,
+      linear('g', '#7fdcff', '#2fa8d8') + SHINE,
+    ),
+};
+
+const toothpaste = {
+  name: 'Пасточка',
+  line: 'Для дітей вистачить пасти розміром з горошину.',
+  body: () =>
+    wrap(
+      `<g transform="rotate(-20 100 100)">` +
+        `<path d="M 40 70 L 140 62 L 140 138 L 40 130 Q 30 100 40 70 Z" fill="url(#g)" stroke="#2f8fb8" stroke-width="5" stroke-linejoin="round"/>` +
+        `<rect x="138" y="80" width="26" height="40" rx="6" fill="#dd2590" stroke="#a3166a" stroke-width="4"/>` +
+        `<rect x="60" y="88" width="56" height="22" rx="11" fill="#ffffff" opacity="0.85"/>` +
+        `<path d="M 74 99 l 10 0 M 92 99 l 10 0" stroke="#8fe3f7" stroke-width="5" stroke-linecap="round"/>` +
+        gloss(64, 76, 22, 6, 0) +
+        `</g>` +
+        `<circle cx="164" cy="56" r="13" fill="#ffffff" stroke="#8fe3f7" stroke-width="4"/>`,
+      linear('g', '#ffffff', '#cfefff') + SHINE,
+    ),
+};
+
+const kysliuk = {
+  name: 'Кислюк',
+  line: 'Любить цукор і псує зубки. Щіточка — і його нема!',
+  eyeY: 98,
+  body() {
+    const d = blobPath((a) => 62 + 9 * Math.sin(3 * a - Math.PI / 2) + 3 * Math.sin(6 * a), 100, 108);
+    return wrap(
+      `<path d="${d}" fill="url(#g)" stroke="#c46a00" stroke-width="5"/>` +
+        `<circle cx="70" cy="140" r="6" fill="#ffe7a8" opacity="0.8"/><circle cx="134" cy="132" r="8" fill="#ffe7a8" opacity="0.8"/>` +
+        gloss(76, 76) +
+        blush(124, 40) +
+        `<path d="M 86 130 q 14 12 28 0" fill="none" stroke="${INK}" stroke-width="4.5" stroke-linecap="round"/>` +
+        `<path d="M 108 134 l 4 9 l 5 -10" fill="#ffffff" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>`,
+      radial('g', '#ffe7a8', '#ffb23f', '#c46a00') + SHINE,
+    );
+  },
+  eyes: () => wrap(eyePair(98, { gap: 22, r: 13, look: 3 })),
+};
+
+// ---------------------------------------------------------------- tummy
+
+const dobryk = {
+  name: 'Добрик',
+  line: 'Корисна бактерія. Допомагає животику — не чіпай!',
+  eyeY: 98,
+  body() {
+    const d = blobPath((a) => 64 + 4 * Math.sin(4 * a + 0.5), 100, 106);
+    const halo = `<ellipse cx="100" cy="28" rx="34" ry="9" fill="none" stroke="#ffd23f" stroke-width="7"/>`;
+    const heart = `<path d="M 100 156 c -4 -8 -16 -6 -14 3 c 1 6 14 13 14 13 c 0 0 13 -7 14 -13 c 2 -9 -10 -11 -14 -3 Z" fill="#ff5c9a" stroke="#ffffff" stroke-width="2"/>`;
+    return wrap(
+      halo +
+        `<path d="${d}" fill="url(#g)" stroke="#e08a00" stroke-width="5"/>` +
+        gloss(74, 74) +
+        blush(124, 42) +
+        smile(126, 18) +
+        heart,
+      radial('g', '#fff8cf', '#ffd86b', '#e0a400') + SHINE,
+    );
+  },
+  eyes: () => wrap(eyePair(98, { gap: 24, r: 14 })),
+};
+
+const yogurt = {
+  name: 'Йогуртик',
+  line: 'Може містити живих корисних бактерій.',
+  body: () =>
+    wrap(
+      `<path d="M 50 64 L 150 64 L 138 170 Q 136 180 126 180 L 74 180 Q 64 180 62 170 Z" fill="url(#g)" stroke="#9fb7d6" stroke-width="5" stroke-linejoin="round"/>` +
+        `<rect x="44" y="48" width="112" height="22" rx="8" fill="#dd2590" stroke="#a3166a" stroke-width="4"/>` +
+        `<circle cx="100" cy="122" r="26" fill="#ffd6e7"/>` +
+        `<circle cx="92" cy="116" r="7" fill="#ff5c9a"/><circle cx="108" cy="126" r="6" fill="#ff5c9a"/><circle cx="104" cy="110" r="4" fill="#ff8fb8"/>` +
+        gloss(70, 90, 8, 24, 0),
+      linear('g', '#ffffff', '#e9f1ff') + SHINE,
+    ),
+};
+
+const banana = {
+  name: 'Банан',
+  line: 'Солодкий перекус, у якому є калій.',
+  flesh: '#fff3b0',
+  juice: 0xffe066,
+  body: () =>
+    wrap(
+      `<path d="M 40 70 Q 42 150 120 162 Q 162 166 172 140 Q 120 144 92 120 Q 66 98 62 64 Q 50 56 40 70 Z" fill="url(#g)" stroke="#c99a00" stroke-width="5" stroke-linejoin="round"/>` +
+        `<path d="M 40 70 l -6 -14 l 12 2 Z" fill="#7a5a1d"/>` +
+        `<path d="M 172 140 l 10 4 l -6 6 Z" fill="#7a5a1d"/>` +
+        `<path d="M 58 84 Q 66 130 120 148" fill="none" stroke="#fff6c4" stroke-width="5" stroke-linecap="round" opacity="0.8"/>`,
+      radial('g', '#fff6c4', '#ffe14d', '#e0b400') + SHINE,
+    ),
+};
+
+const plate = {
+  name: 'Тарілочка',
+  line: 'Половина тарілки — овочі та фрукти.',
+  body: () =>
+    wrap(
+      `<circle cx="100" cy="104" r="76" fill="#ffffff" stroke="#9fb7d6" stroke-width="5"/>` +
+        `<circle cx="100" cy="104" r="60" fill="#f4f8ff"/>` +
+        `<path d="M 100 104 L 100 44 A 60 60 0 0 1 160 104 Z" fill="#7ed957"/>` +
+        `<path d="M 100 104 L 160 104 A 60 60 0 0 1 100 164 Z" fill="#ff9f1c"/>` +
+        `<path d="M 100 104 L 100 164 A 60 60 0 0 1 40 104 Z" fill="#ffd27a"/>` +
+        `<path d="M 100 104 L 40 104 A 60 60 0 0 1 100 44 Z" fill="#ff8fab"/>` +
+        gloss(64, 64, 22, 10),
+      SHINE,
+    ),
+};
+
+// ---------------------------------------------------------------- skin
+
+const hat = {
+  name: 'Панамка',
+  line: 'Береже голову від сонця влітку.',
+  body: () =>
+    wrap(
+      `<ellipse cx="100" cy="132" rx="84" ry="26" fill="url(#g)" stroke="#2f8fb8" stroke-width="5"/>` +
+        `<path d="M 50 130 Q 52 58 100 54 Q 148 58 150 130 Z" fill="url(#g)" stroke="#2f8fb8" stroke-width="5"/>` +
+        `<path d="M 52 118 Q 100 132 148 118 L 149 128 Q 100 142 51 128 Z" fill="#dd2590"/>` +
+        `<circle cx="80" cy="88" r="6" fill="#ffffff" opacity="0.8"/><circle cx="114" cy="80" r="5" fill="#ffffff" opacity="0.8"/><circle cx="104" cy="104" r="4" fill="#ffffff" opacity="0.8"/>` +
+        gloss(76, 76, 18, 8),
+      radial('g', '#c9f3ff', '#4fcdf5', '#2f8fb8') + SHINE,
+    ),
+};
+
+const cream = {
+  name: 'Кремчик',
+  line: 'Сонцезахисний крем — для прогулянок під сонцем.',
+  body: () =>
+    wrap(
+      `<g transform="rotate(18 100 100)">` +
+        `<rect x="62" y="40" width="76" height="120" rx="22" fill="url(#g)" stroke="#e0a400" stroke-width="5"/>` +
+        `<rect x="76" y="160" width="48" height="22" rx="6" fill="#ff9f1c" stroke="#d96a00" stroke-width="4"/>` +
+        `<circle cx="100" cy="90" r="20" fill="#ffd23f" stroke="#ffffff" stroke-width="4"/>` +
+        [0, 45, 90, 135, 180, 225, 270, 315]
+          .map((deg) => {
+            const r = (deg * Math.PI) / 180;
+            const p = (k) => `${(100 + Math.cos(r) * k).toFixed(1)} ${(90 + Math.sin(r) * k).toFixed(1)}`;
+            return `<path d="M ${p(26)} L ${p(34)}" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>`;
+          })
+          .join('') +
+        gloss(80, 64, 8, 22, 0) +
+        `</g>`,
+      linear('g', '#fff8d6', '#ffe07a') + SHINE,
+    ),
+};
+
 // Tutorial ghost hand (pointing finger).
 const hand = {
   name: 'Підказка',
@@ -518,6 +698,9 @@ export const ART = {
   orange, apple, kiwi, strawberry, broccoli,
   soap, vaccine, patch,
   towel, bubble, water, carrot, jar, heart, oxygen, shield,
+  zubchyk, toothbrush, toothpaste, kysliuk,
+  dobryk, yogurt, banana, plate,
+  hat, cream,
   hand,
 };
 

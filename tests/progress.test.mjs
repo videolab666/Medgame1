@@ -60,3 +60,25 @@ test('8 stickers per location, ids unique', () => {
   }
   assert.equal(new Set(all).size, all.length);
 });
+
+test('locations unlock in a chain of six', async () => {
+  const { LOCATION_ORDER } = await import('../src/core/config.js');
+  const p = createProgress(memoryStorage());
+  const opened = [];
+  for (const loc of LOCATION_ORDER) {
+    assert.ok(p.isUnlocked(loc), loc);
+    for (let i = 0; i < 3; i++) {
+      const u = p.completeRound(loc, mulberry32(i)).unlocked;
+      if (u) opened.push(u);
+    }
+  }
+  assert.deepEqual(opened, LOCATION_ORDER.slice(1));
+});
+
+test('old saves with three locations load fine', () => {
+  const st = memoryStorage();
+  st.save({ version: 1, rounds: { hands: 3, kitchen: 3, blood: 1 }, stickers: {}, sinceRest: 0, muted: false, seenFacts: {}, tutorialDone: true });
+  const p = createProgress(st);
+  assert.equal(p.state.rounds.mouth, 0);
+  assert.ok(!p.isUnlocked('mouth'));
+});

@@ -6,6 +6,9 @@ const THEMES = {
   hands: { top: '#4fcdf5', mid: '#8fe3f7', bottom: '#c9f7e6', edge: '13,110,160', bokeh: [0xffffff, 0xc9f3ff, 0xffd6f5] },
   kitchen: { top: '#ffc94d', mid: '#ffb27a', bottom: '#ff9fc8', edge: '190,70,40', bokeh: [0xffffff, 0xfff2b0, 0xffd1e6] },
   blood: { top: '#ff7aa8', mid: '#ff9cc0', bottom: '#ffd0e2', edge: '160,20,70', bokeh: [0xffffff, 0xffc2d6, 0xffe6a8] },
+  mouth: { top: '#ff8fb3', mid: '#ffb3c9', bottom: '#e0f7ff', edge: '170,40,90', bokeh: [0xffffff, 0xc9f3ff, 0xffd6e7] },
+  tummy: { top: '#8fe08a', mid: '#c8f29a', bottom: '#fff1b8', edge: '40,120,60', bokeh: [0xffffff, 0xfff2b0, 0xd6ffd0] },
+  skin: { top: '#ffb870', mid: '#ffcf94', bottom: '#ffe9cc', edge: '190,100,30', bokeh: [0xffffff, 0xfff2b0, 0xffd6c2] },
   calm: { top: '#7cc8ff', mid: '#a9d8ff', bottom: '#dcd2ff', edge: '40,70,160', bokeh: [0xffffff, 0xd9f0ff, 0xe8dcff] },
 };
 
@@ -62,6 +65,55 @@ function paintProps(ctx, location, w, h) {
       for (let x = 0; x <= w; x += 20) ctx.lineTo(x, base + Math.sin(x / w * Math.PI * 3 + i) * h * 0.025);
       ctx.lineTo(w, base + h * 0.06);
       ctx.lineTo(0, base + h * 0.06);
+      ctx.fill();
+    }
+  }
+  if (location === 'mouth') {
+    // A soft smile frame of rounded teeth along the top and bottom edges.
+    const s = Math.min(w, h);
+    const tw = s * 0.16;
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    for (const [y0, dir] of [[0, 1], [h, -1]]) {
+      for (let x = -tw * 0.3; x < w; x += tw * 1.05) {
+        ctx.beginPath();
+        ctx.roundRect(x, dir > 0 ? y0 - tw * 0.4 : y0 - tw * 0.6, tw, tw, tw * 0.35);
+        ctx.fill();
+      }
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 4;
+    for (const [fx, fy, fr] of [[0.2, 0.3, 0.05], [0.8, 0.45, 0.07], [0.3, 0.7, 0.04]]) {
+      ctx.beginPath();
+      ctx.arc(fx * w, fy * h, fr * s * 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  } else if (location === 'tummy') {
+    // Gentle rolling hills with tiny friendly colonies (no organs).
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = `rgba(255,255,255,${0.16 + i * 0.08})`;
+      ctx.beginPath();
+      const base = h * (0.55 + i * 0.15);
+      ctx.moveTo(0, h);
+      for (let x = 0; x <= w; x += 16) ctx.lineTo(x, base + Math.sin((x / w) * Math.PI * 2 + i * 1.7) * h * 0.04);
+      ctx.lineTo(w, h);
+      ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(255,230,120,0.45)';
+    for (let i = 0; i < 18; i++) {
+      ctx.beginPath();
+      ctx.arc(((i * 137) % 100) / 100 * w, ((i * 61) % 100) / 100 * h * 0.5, Math.min(w, h) * 0.012, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (location === 'skin') {
+    const s = Math.min(w, h);
+    ctx.fillStyle = 'rgba(255,240,170,0.9)';
+    ctx.beginPath();
+    ctx.arc(s * 0.16, s * 0.16, s * 0.09, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    for (let i = 0; i < 40; i++) {
+      ctx.beginPath();
+      ctx.arc(((i * 89) % 100) / 100 * w, ((i * 53) % 100) / 100 * h, s * (0.008 + (i % 3) * 0.004), 0, Math.PI * 2);
       ctx.fill();
     }
   }

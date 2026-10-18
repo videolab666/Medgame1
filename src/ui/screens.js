@@ -9,10 +9,18 @@ export const LOCATION_INFO = {
   hands: { name: 'Долоньки', icon: 'soap', hint: 'Мий мікробів!' },
   kitchen: { name: 'Кухня вітамінів', icon: 'orange', hint: 'Збирай вітаміни!' },
   blood: { name: 'Річка крові', icon: 'chervonya', hint: 'Не чіпай своїх!' },
+  mouth: { name: 'Ротик', icon: 'zubchyk', hint: 'Бережи зубки!' },
+  tummy: { name: 'Животик', icon: 'dobryk', hint: 'Добрика не чіпай!' },
+  skin: { name: 'Шкіра', icon: 'hat', hint: 'Шкіра — наш щит!' },
 };
 
 const COMBO_WORDS = { 3: 'Супер!', 5: 'Чудово!', 10: 'Неймовірно!' };
-const BONUS_WORDS = { soap: 'Мильна хвиля!', vaccine: 'Щит щеплення!', patch: 'Латочка: усе повільно!' };
+const BONUS_WORDS = {
+  soap: 'Мильна хвиля!',
+  toothbrush: 'Щіточка: чисто!',
+  vaccine: 'Щит щеплення!',
+  patch: 'Латочка: усе повільно!',
+};
 
 const img = (key, cls = '') => `<img class="${cls}" alt="" draggable="false" src="${svgDataUrl(fullSvg(key))}">`;
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -55,11 +63,13 @@ export function createUI(root, { progress }) {
     const info = LOCATION_INFO[loc];
     const open = progress.isUnlocked(loc);
     const i = LOCATION_ORDER.indexOf(loc);
-    const need = i > 0 ? CONFIG.UNLOCK_AFTER - progress.state.rounds[LOCATION_ORDER[i - 1]] : 0;
+    const prev = LOCATION_ORDER[i - 1];
+    const need = i > 0 ? CONFIG.UNLOCK_AFTER - progress.state.rounds[prev] : 0;
+    const prevOpen = i > 0 && progress.isUnlocked(prev);
     return `<button class="loc-card pop ${open ? '' : 'locked'}" data-act="${open ? 'play' : 'locked'}" data-arg="${loc}">
       ${img(info.icon, 'loc-icon')}
       <span class="loc-name">${info.name}</span>
-      <span class="loc-hint">${open ? info.hint : `🔒 ще ${need} ${need === 1 ? 'раунд' : 'раунди'}`}</span>
+      <span class="loc-hint">${open ? info.hint : prevOpen ? `🔒 ще ${need} ${need === 1 ? 'раунд' : 'раунди'}` : '🔒'}</span>
     </button>`;
   }
 

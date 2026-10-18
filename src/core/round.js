@@ -1,6 +1,6 @@
 // One round of play (or the endless calm mode). Pure logic; emits events that
 // render, fx, audio and UI subscribe to.
-import { CONFIG } from './config.js';
+import { CONFIG, BONUS_EFFECT } from './config.js';
 import { mulberry32 } from './rng.js';
 import { createSpawner } from './spawner.js';
 import { stepEntity, isOffscreen } from './physics.js';
@@ -40,12 +40,13 @@ export function createRound({ seed, width, height, location, mode, tutorial }) {
 
   function activateBonus(e) {
     kill(e);
-    emit('bonus', e.type, e);
-    if (e.type === 'soap') {
+    const effect = BONUS_EFFECT[e.type];
+    emit('bonus', e.type, e, effect);
+    if (effect === 'wave') {
       for (const m of state.entities) if (m.alive && m.kind === 'microbe') capture(m, true);
-    } else if (e.type === 'vaccine') {
+    } else if (effect === 'shield') {
       state.shield = CONFIG.SHIELD_SEC;
-    } else if (e.type === 'patch') {
+    } else if (effect === 'slow') {
       state.slow = CONFIG.SLOW_SEC;
     }
   }
@@ -85,11 +86,11 @@ export function createRound({ seed, width, height, location, mode, tutorial }) {
   function tickTimers(dt) {
     if (state.shield > 0) {
       state.shield = Math.max(0, state.shield - dt);
-      if (state.shield === 0) emit('bonusEnd', 'vaccine');
+      if (state.shield === 0) emit('bonusEnd', 'shield');
     }
     if (state.slow > 0) {
       state.slow = Math.max(0, state.slow - dt);
-      if (state.slow === 0) emit('bonusEnd', 'patch');
+      if (state.slow === 0) emit('bonusEnd', 'slow');
     }
   }
 

@@ -11,6 +11,8 @@ export function installHarness(game) {
   const ev = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {
     clientX: x, clientY: y, pointerId: 1, bubbles: true, pointerType: 'touch',
   }));
+  // The preview pane is often hidden; keep the game from auto-pausing.
+  Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
   let simT = performance.now();
   game.stage.app.ticker.stop();
   game.gsap.ticker.lagSmoothing(0);

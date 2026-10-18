@@ -7,6 +7,9 @@ const ART_BY_LOCATION = {
   hands: ['chykhunchyk', 'brudnulya', 'lypuchka', 'kashlyuk', 'soap', 'bilyk', 'towel', 'bubble'],
   kitchen: ['orange', 'apple', 'kiwi', 'strawberry', 'broccoli', 'water', 'carrot', 'jar'],
   blood: ['chervonya', 'bilyk', 'latochka', 'vaccine', 'patch', 'heart', 'oxygen', 'shield'],
+  mouth: ['zubchyk', 'toothbrush', 'toothpaste', 'kysliuk', 'lypuchka', 'apple', 'carrot', 'water'],
+  tummy: ['dobryk', 'yogurt', 'banana', 'plate', 'broccoli', 'kiwi', 'brudnulya', 'kashlyuk'],
+  skin: ['hat', 'cream', 'patch', 'latochka', 'bilyk', 'soap', 'towel', 'chykhunchyk'],
 };
 
 export const STICKERS = Object.fromEntries(

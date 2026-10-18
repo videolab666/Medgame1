@@ -256,21 +256,21 @@ export function createEffects({ stage, art, particles, synth, flash, hud, haptic
         synth.chime();
         softFlash(0.12 + Math.min(n, 10) * 0.006);
       });
-      round.on('bonus', (type, e) => {
+      round.on('bonus', (type, e, effect) => {
         const v = take(e);
         if (v) {
           particles.emit('sparkle', e.x, e.y, { count: 18 });
           T(gsap.to(v.container.scale, { x: 1.6, y: 1.6, duration: 0.25 }));
           T(gsap.to(v.container, { alpha: 0, duration: 0.25, onComplete: () => v.destroy() }));
         }
-        if (type === 'soap') soapWave();
-        if (type === 'vaccine') showDome(round.shieldCenter);
-        if (type === 'patch') showSlowTint();
+        if (effect === 'wave') soapWave();
+        if (effect === 'shield') showDome(round.shieldCenter);
+        if (effect === 'slow') showSlowTint();
         hud.bonusBadge(type);
       });
       round.on('bonusEnd', (type) => {
-        if (type === 'vaccine') hideDome();
-        if (type === 'patch') hideSlowTint();
+        if (type === 'shield') hideDome();
+        if (type === 'slow') hideSlowTint();
       });
       round.on('end', () => {
         particles.emit('starRain', stage.width);

@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const errors = [];
-const LOCS = ['hands', 'kitchen', 'blood'];
+const { LOCATION_ORDER: LOCS } = await import(pathToFileURL('src/core/config.js').href);
 // Whole words only: "ніж" is also the Ukrainian "than", so it is matched exactly
 // and only in the "knife" sense via its other forms.
 const BANNED_WORDS = new Set(['бій', 'бою', 'ножем', 'вогонь', 'війна', 'війни']);

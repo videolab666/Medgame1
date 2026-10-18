@@ -83,3 +83,16 @@ test('cells never spawn next to a microbe in the same batch', () => {
     }
   }
 });
+
+test('each location spawns only its own pools', async () => {
+  const { typesFor, LOCATION_ORDER } = await import('../src/core/config.js');
+  for (const loc of LOCATION_ORDER) {
+    const pools = typesFor(loc);
+    for (const e of run({ location: loc })) assert.ok(pools[e.kind].includes(e.type), `${loc}: ${e.kind} ${e.type}`);
+  }
+});
+
+test('tummy friendly character is the good bacterium', () => {
+  const cells = run({ location: 'tummy' }).filter((e) => e.kind === 'cell');
+  assert.ok(cells.length > 0 && cells.every((e) => e.type === 'dobryk'));
+});

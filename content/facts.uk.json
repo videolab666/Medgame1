@@ -10,7 +10,6 @@
     { "id": "fact.hands.07", "location": "hands", "text": "Порахуй до двадцяти, поки миєш руки.", "source": "CDC — Clean Hands: When and How to Wash Your Hands", "status": "draft" },
     { "id": "fact.hands.08", "location": "hands", "text": "Мікроби такі маленькі, що їх видно лише в мікроскоп.", "source": "MedlinePlus — Germs and Hygiene", "status": "draft" },
     { "id": "fact.hands.09", "location": "hands", "text": "Погладив тваринку — помий після цього руки.", "source": "CDC — Clean Hands: When and How to Wash Your Hands", "status": "draft" },
-
     { "id": "fact.kitchen.01", "location": "kitchen", "text": "У ківі вітаміну C більше, ніж в апельсині!", "source": "USDA FoodData Central — Kiwifruit, green, raw; Oranges, raw", "status": "draft" },
     { "id": "fact.kitchen.02", "location": "kitchen", "text": "Апельсини та броколі багаті на вітамін C.", "source": "USDA FoodData Central — Oranges, raw; Broccoli, raw", "status": "draft" },
     { "id": "fact.kitchen.03", "location": "kitchen", "text": "Вітамін C допомагає ранкам загоюватися.", "source": "NIH Office of Dietary Supplements — Vitamin C Fact Sheet", "status": "draft" },
@@ -20,7 +19,6 @@
     { "id": "fact.kitchen.07", "location": "kitchen", "text": "Яблуко зі шкіркою дає корисну клітковину.", "source": "USDA FoodData Central — Apples, raw, with skin", "status": "draft" },
     { "id": "fact.kitchen.08", "location": "kitchen", "text": "Полуниця — теж джерело вітаміну C!", "source": "USDA FoodData Central — Strawberries, raw", "status": "draft" },
     { "id": "fact.kitchen.09", "location": "kitchen", "text": "Броколі — овоч-богатир: має вітаміни C і K.", "source": "USDA FoodData Central — Broccoli, raw", "status": "draft" },
-
     { "id": "fact.blood.01", "location": "blood", "text": "Еритроцити розносять кисень по всьому тілу.", "source": "MedlinePlus — Blood", "status": "draft" },
     { "id": "fact.blood.02", "location": "blood", "text": "Лейкоцити допомагають тілу справлятися з мікробами.", "source": "MedlinePlus — White Blood Cell Count", "status": "draft" },
     { "id": "fact.blood.03", "location": "blood", "text": "Тромбоцити допомагають закрити ранку.", "source": "MedlinePlus — Platelet Disorders", "status": "draft" },
@@ -28,6 +26,30 @@
     { "id": "fact.blood.05", "location": "blood", "text": "Серце качає кров без перерви, навіть коли ти спиш.", "source": "MedlinePlus — How the Heart Works (NHLBI)", "status": "draft" },
     { "id": "fact.blood.06", "location": "blood", "text": "Нова кров народжується всередині кісток — у кістковому мозку.", "source": "MedlinePlus — Bone Marrow Diseases", "status": "draft" },
     { "id": "fact.blood.07", "location": "blood", "text": "Еритроцити червоні завдяки гемоглобіну.", "source": "MedlinePlus — Hemoglobin Test", "status": "draft" },
-    { "id": "fact.blood.08", "location": "blood", "text": "Лейкоцити бувають різні — ціла команда помічників!", "source": "MedlinePlus — White Blood Cell Count", "status": "draft" }
+    { "id": "fact.blood.08", "location": "blood", "text": "Лейкоцити бувають різні — ціла команда помічників!", "source": "MedlinePlus — White Blood Cell Count", "status": "draft" },
+    { "id": "fact.mouth.01", "location": "mouth", "text": "Чисть зуби двічі на день — вранці та ввечері.", "source": "CDC — Children's Oral Health; ADA MouthHealthy — Brushing Your Teeth", "status": "draft" },
+    { "id": "fact.mouth.02", "location": "mouth", "text": "Чисть зубки дві хвилини!", "source": "ADA MouthHealthy — Brushing Your Teeth", "status": "draft" },
+    { "id": "fact.mouth.03", "location": "mouth", "text": "Дітям вистачить зубної пасти розміром з горошину.", "source": "CDC — Children's Oral Health (fluoride toothpaste, pea-sized amount)", "status": "draft" },
+    { "id": "fact.mouth.04", "location": "mouth", "text": "Мікроби в роті люблять цукор і роблять дірочки в зубах.", "source": "CDC — Children's Oral Health; ВООЗ — Oral health", "status": "draft" },
+    { "id": "fact.mouth.05", "location": "mouth", "text": "Замість солодкої газованки пий воду — зубкам приємно!", "source": "ВООЗ — Oral health (free sugars and dental caries)", "status": "draft" },
+    { "id": "fact.mouth.06", "location": "mouth", "text": "Яблуко й морква — смачний перекус замість цукерок.", "source": "ADA MouthHealthy — Nutrition / snacks", "status": "draft" },
+    { "id": "fact.mouth.07", "location": "mouth", "text": "Ходи до стоматолога, навіть коли зубки не болять.", "source": "ADA MouthHealthy — Dental visits", "status": "draft" },
+    { "id": "fact.mouth.08", "location": "mouth", "text": "Молочні зуби випадають, а на їхньому місці ростуть постійні.", "source": "MedlinePlus — Tooth development", "status": "draft" },
+    { "id": "fact.tummy.01", "location": "tummy", "text": "У животику живуть корисні бактерії — вони допомагають травленню.", "source": "NIH — Human Microbiome / NIDDK — Your Digestive System", "status": "draft" },
+    { "id": "fact.tummy.02", "location": "tummy", "text": "Не всі мікроби погані: деякі — наші друзі!", "source": "NIH — Human Microbiome Project", "status": "draft" },
+    { "id": "fact.tummy.03", "location": "tummy", "text": "Клітковина з овочів і фруктів годує корисних бактерій.", "source": "Harvard T.H. Chan School of Public Health — The Microbiome", "status": "draft" },
+    { "id": "fact.tummy.04", "location": "tummy", "text": "Мий фрукти й овочі перед їжею.", "source": "ВООЗ — Five Keys to Safer Food", "status": "draft" },
+    { "id": "fact.tummy.05", "location": "tummy", "text": "Вода допомагає животику добре працювати.", "source": "NIDDK — Constipation in Children (fluids and fiber)", "status": "draft" },
+    { "id": "fact.tummy.06", "location": "tummy", "text": "Банан — смачне джерело калію.", "source": "USDA FoodData Central — Bananas, raw", "status": "draft" },
+    { "id": "fact.tummy.07", "location": "tummy", "text": "Деякі йогурти містять живих корисних бактерій.", "source": "NIH NCCIH — Probiotics: What You Need To Know", "status": "draft" },
+    { "id": "fact.tummy.08", "location": "tummy", "text": "Перед їжею мий руки з милом!", "source": "CDC — Clean Hands: When and How to Wash Your Hands", "status": "draft" },
+    { "id": "fact.skin.01", "location": "skin", "text": "Шкіра — найбільший орган тіла.", "source": "MedlinePlus — Skin", "status": "draft" },
+    { "id": "fact.skin.02", "location": "skin", "text": "Шкіра береже тіло від мікробів, як щит.", "source": "MedlinePlus — Skin; NIH NIAMS — Skin basics", "status": "draft" },
+    { "id": "fact.skin.03", "location": "skin", "text": "Подряпину спершу промий чистою водою.", "source": "American Academy of Dermatology — How to treat minor cuts", "status": "draft" },
+    { "id": "fact.skin.04", "location": "skin", "text": "Пластир береже ранку від бруду, поки вона гоїться.", "source": "American Academy of Dermatology — How to treat minor cuts", "status": "draft" },
+    { "id": "fact.skin.05", "location": "skin", "text": "Влітку носи панамку й користуйся сонцезахисним кремом.", "source": "CDC — Sun Safety for children", "status": "draft" },
+    { "id": "fact.skin.06", "location": "skin", "text": "Шкіра постійно оновлюється — старі клітинки злущуються.", "source": "MedlinePlus — Skin", "status": "draft" },
+    { "id": "fact.skin.07", "location": "skin", "text": "Не здирай скоринку з ранки — під нею гоїться шкіра.", "source": "American Academy of Dermatology — Proper wound care", "status": "draft" },
+    { "id": "fact.skin.08", "location": "skin", "text": "Купання з милом змиває бруд і мікробів зі шкіри.", "source": "CDC — Personal hygiene / Healthy habits", "status": "draft" }
   ]
 }

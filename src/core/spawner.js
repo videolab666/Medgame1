@@ -1,5 +1,5 @@
 // Decides what flies out, where and when. Pure and seeded.
-import { CONFIG, LOCATIONS, TYPES, lerp } from './config.js';
+import { CONFIG, LOCATIONS, lerp, typesFor } from './config.js';
 import { pick, range } from './rng.js';
 
 const CELL_GAP = 200;
@@ -8,6 +8,7 @@ const TUTORIAL_CELL_AT = 8;
 
 export function createSpawner({ rng, width, height, location, mode, tutorial }) {
   const weights = LOCATIONS[location];
+  const TYPES = typesFor(location);
   let nextId = 1;
   let nextAt = mode === 'calm' ? 0.3 : 0.6;
   let bonuses = 0;
@@ -71,7 +72,7 @@ export function createSpawner({ rng, width, height, location, mode, tutorial }) 
     if (!tutorialCellDone && t >= TUTORIAL_CELL_AT) {
       tutorialCellDone = true;
       nextAt = t + 1.6;
-      return [make('cell', 'bilyk', width / 2, t, { apex: 0.6 })];
+      return [make('cell', TYPES.cell[0], width / 2, t, { apex: 0.6 })];
     }
     nextAt = t + 1.4;
     return [make('microbe', pick(rng, TYPES.microbe), range(rng, 250, width - 250), t, { apex: 0.6 })];

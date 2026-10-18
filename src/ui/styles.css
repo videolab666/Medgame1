@@ -89,17 +89,20 @@ button {
 .mute { position: absolute; top: calc(12px + var(--safe-top)); right: 12px; }
 
 /* ---------- title */
+/* Auto margins centre the menu when it fits and keep its top reachable when it does not. */
+.screen.title { align-items: flex-start; }
 .title-wrap {
+  margin: auto 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
+  gap: 14px;
   width: min(100%, 480px);
 }
 .logo { position: relative; text-align: center; }
 .logo h1 {
   margin: 0;
-  font-size: clamp(48px, 14vw, 72px);
+  font-size: clamp(44px, 12.5vw, 68px);
   line-height: 0.95;
   font-weight: 900;
   color: var(--white);
@@ -107,8 +110,8 @@ button {
   paint-order: stroke fill;
   text-shadow: 0 6px 0 var(--magenta), 0 14px 24px rgba(221, 37, 144, 0.35);
 }
-.logo-chars { display: flex; justify-content: center; gap: 6px; height: 92px; }
-.logo-chars img { width: 92px; height: 92px; }
+.logo-chars { display: flex; justify-content: center; gap: 6px; height: 76px; }
+.logo-chars img { width: 76px; height: 76px; }
 .float { animation: float 2.6s ease-in-out infinite; }
 .float.b { animation-delay: -0.8s; }
 .float.c { animation-delay: -1.6s; }
@@ -124,9 +127,9 @@ button {
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: var(--shadow);
-  min-height: 132px;
+  min-height: 112px;
 }
-.loc-icon { width: 64px; height: 64px; }
+.loc-icon { width: 52px; height: 52px; }
 .loc-name { font-weight: 900; font-size: 15px; line-height: 1.1; text-align: center; }
 .loc-hint { font-size: 13px; font-weight: 700; opacity: 0.75; }
 .loc-card.locked { filter: grayscale(0.9); opacity: 0.65; }
@@ -230,7 +233,7 @@ button {
 .atlas-wrap, .parents { width: min(100%, 480px); display: flex; flex-direction: column; gap: 12px; }
 .atlas-head { display: flex; align-items: center; gap: 12px; }
 .atlas-head h2 { margin: 0; font-size: 30px; font-weight: 900; }
-.tabs { display: flex; gap: 8px; }
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .tab { flex: 1; min-height: 48px; border-radius: 16px; background: rgba(255, 255, 255, 0.7); font-weight: 900; font-size: 14px; }
 .tab.on { background: var(--magenta); color: var(--white); }
 .progress-line { font-weight: 800; }
