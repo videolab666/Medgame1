@@ -354,3 +354,58 @@ test('slices count towards the round tally', () => {
   assert.equal(r.state.missed, 0);
   assert.equal(r.state.kingHits, 0);
 });
+
+test('dense wave: one drawn line cuts several overlapping or adjacent targets', () => {
+  const r = mk();
+  const captured = [];
+  r.on('capture', (e) => captured.push(e.id));
+  for (let x = 200; x <= 800; x += 100) {
+    r._inject(ent('microbe', 'chykhunchyk', x, 550));
+  }
+  r.update(STEP, [{ x1: 100, y1: 550, x2: 900, y2: 550, active: true, speed: 900 }]);
+  assert.equal(r.state.score, 7);
+  assert.equal(r.state.sliced, 7);
+  assert.equal(captured.length, 7);
+});
+
+test('a flying target crossing the swipe within a physics step is caught', () => {
+  const r = mk();
+  const e = ent('microbe', 'chykhunchyk', 500, 410);
+  e.vy = 12000; // exaggerated speed makes its traversal unambiguous
+  r._inject(e);
+  r.update(STEP, [{ x1: 400, y1: 500, x2: 600, y2: 500, active: true, speed: 1200 }]);
+  assert.equal(r.state.score, 1, 'the sprite crossed the cut between start and end points');
+});
+
+test('batch input uses the start of the whole render frame, not just last physics step', () => {
+  const r = mk();
+  const e = ent('microbe', 'chykhunchyk', 500, 300);
+  e.vy = 6000;
+  r._inject(e);
+  r.beginInputFrame();
+  r.update(STEP, []);
+  r.update(STEP, []);
+  r.update(STEP, [{ x1: 400, y1: 400, x2: 600, y2: 400, active: true, speed: 1200 }]);
+  assert.equal(r.state.score, 1);
+});
+
+test('friends stay strictly hit-tested at current position; sweeps cannot cause game over', () => {
+  const r = mk();
+  const e = ent('cell', 'bilyk', 500, 410);
+  e.vy = 12000;
+  r._inject(e);
+  r.update(STEP, [{ x1: 400, y1: 500, x2: 600, y2: 500, active: true, speed: 1200 }]);
+  assert.equal(r.state.cellTouches, 0);
+  assert.equal(r.state.ended, false);
+});
+
+test('only one early game-over event is emitted for overlapping forbidden friends', () => {
+  const r = mk();
+  let stops = 0;
+  r.on('end', () => stops++);
+  r._inject(ent('cell', 'bilyk', 500, 500));
+  r._inject(ent('cell', 'bilyk', 500, 500));
+  r.update(STEP, cut(500, 500));
+  assert.equal(stops, 1);
+  assert.equal(r.state.cellTouches, 1);
+});

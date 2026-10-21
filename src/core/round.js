@@ -5,7 +5,7 @@ import { POWERUP_FX } from './economy.js';
 import { mulberry32 } from './rng.js';
 import { createSpawner } from './spawner.js';
 import { stepEntity, isOffscreen } from './physics.js';
-import { segmentHitsCircle } from './swipe.js';
+import { segmentHitsCircle, segmentHitsSweptCircle } from './swipe.js';
 
 export function createRound({
   seed, width, height, location, mode, duration = CONFIG.ROUND_SEC, run = null, gameOver = CONFIG.GAME_OVER,
@@ -228,8 +228,18 @@ export function createRound({
     for (const seg of segments) {
       if (!(seg.active || (calm && seg.tap) || (calm && seg.speed > 0))) continue;
       for (const e of state.entities) {
-        if (!e.alive) continue;
-        if (segmentHitsCircle(seg.x1, seg.y1, seg.x2, seg.y2, e.x, e.y, e.r * hitScale)) resolve(e, seg);
+        if (state.ended || !e.alive) continue;
+        const radius = e.r * hitScale * (e.kind === 'microbe' || e.kind === 'fruit'
+          ? CONFIG.SLICE_HIT_SCALE : 1);
+        // The "do not slice" friends retain their strict current-position hitbox:
+        // an oversized or swept hazard would unfairly end the child's round.
+        // Sliceable sprites use the full object trajectory across this render frame.
+        const hit = e.kind === 'cell'
+          ? segmentHitsCircle(seg.x1, seg.y1, seg.x2, seg.y2, e.x, e.y, radius)
+          : segmentHitsSweptCircle(seg.x1, seg.y1, seg.x2, seg.y2,
+            e.inputFrameX ?? e.prevX ?? e.x, e.inputFrameY ?? e.prevY ?? e.y,
+            e.x, e.y, radius);
+        if (hit) resolve(e, seg);
       }
     }
   }
@@ -265,6 +275,15 @@ export function createRound({
     _inject(e) {
       state.entities.push(e);
     },
+    // Called once per rendered frame, before zero or more fixed physics steps.
+    // When the GPU is busy and several steps run before input is handled, the
+    // swipe still sees all target motion through that frame.
+    beginInputFrame() {
+      for (const e of state.entities) {
+        e.inputFrameX = e.x;
+        e.inputFrameY = e.y;
+      }
+    },
     update(dt, segments) {
       state.time += dt;
       tickTimers(dt);
@@ -295,6 +314,8 @@ export function createRound({
       }
       const motionDt = dt * scale;
       for (const e of state.entities) {
+        e.prevX = e.x;
+        e.prevY = e.y;
         stepEntity(e, motionDt, e.gravity ?? spawner.gravity);
         if (e.cooldown > 0) e.cooldown -= dt;
       }

@@ -110,9 +110,15 @@ function resetCamera() {
 }
 // Location pre-selected behind the "how to play" card before the first round.
 let introLoc = null;
-const swipe = createSwipe({ minSpeed: CONFIG.SWIPE_MIN_SPEED });
+const swipe = createSwipe({
+  minSpeed: CONFIG.SWIPE_MIN_SPEED,
+  minDistance: CONFIG.SWIPE_MIN_DISTANCE,
+});
+let pointerId = null;
 
 function teardown() {
+  swipe.clear();
+  pointerId = null;
   effects.clear();
   particles.clear();
   trail.clear();
@@ -297,6 +303,8 @@ function calm() {
 
 function pause() {
   if (scene !== 'round' || paused) return;
+  swipe.clear();
+  pointerId = null;
   paused = true;
   ui.showPause();
 }
@@ -447,24 +455,40 @@ function toWorld(ev) {
 }
 const canPlay = () => round && round.interactive && !paused && (scene === 'round' || scene === 'calm');
 
+// Follow one captured pointer. Coalesced samples preserve the actual finger
+// trajectory under heavy rendering load (when browser batches pointermoves).
+const pointerSample = (ev) => {
+  const p = toWorld(ev);
+  const at = Number.isFinite(ev.timeStamp) ? ev.timeStamp / 1000 : now();
+  const seg = swipe.move(p.x, p.y, at);
+  if (seg) trail.push(p.x, p.y, seg.active || scene === 'calm');
+};
 canvas.addEventListener('pointerdown', (ev) => {
-  if (!canPlay()) return;
+  if (!canPlay() || pointerId !== null || ev.isPrimary === false) return;
   synth.unlock();
   music.unlock();
+  pointerId = ev.pointerId;
   canvas.setPointerCapture?.(ev.pointerId);
   const p = toWorld(ev);
-  swipe.begin(p.x, p.y, now());
+  swipe.begin(p.x, p.y, Number.isFinite(ev.timeStamp) ? ev.timeStamp / 1000 : now());
   trail.push(p.x, p.y, scene === 'calm', true);
 });
 canvas.addEventListener('pointermove', (ev) => {
-  if (!canPlay() || !swipe.down) return;
-  const p = toWorld(ev);
-  const seg = swipe.move(p.x, p.y, now());
-  if (seg) trail.push(p.x, p.y, seg.active || scene === 'calm');
+  if (!canPlay() || pointerId !== ev.pointerId || !swipe.down) return;
+  const samples = ev.getCoalescedEvents?.();
+  for (const sample of samples?.length ? samples : [ev]) pointerSample(sample);
 });
-const up = () => swipe.end();
-canvas.addEventListener('pointerup', up);
-canvas.addEventListener('pointercancel', up);
+canvas.addEventListener('pointerup', (ev) => {
+  if (pointerId !== ev.pointerId) return;
+  if (canPlay() && swipe.down) pointerSample(ev); // last motion often arrives here
+  swipe.end();
+  pointerId = null;
+});
+canvas.addEventListener('pointercancel', (ev) => {
+  if (pointerId !== ev.pointerId) return;
+  swipe.clear();
+  pointerId = null;
+});
 
 // ------------------------------------------------------------------ loop
 const probe = { frames: 0, time: 0, done: false };
@@ -493,12 +517,18 @@ stage.app.ticker.add((ticker) => {
 
   if (round && !paused) {
     acc += dt;
-    let segs = swipe.takeSegments();
-    if (!round.interactive) segs = [];
-    while (acc >= CONFIG.STEP) {
-      round.update(CONFIG.STEP, segs);
-      segs = [];
-      acc -= CONFIG.STEP;
+    const steps = Math.floor((acc + 1e-9) / CONFIG.STEP);
+    if (steps > 0) {
+      // Never drain the input queue on a frame without a fixed physics step:
+      // before this fix such a frame silently discarded every finger movement.
+      round.beginInputFrame();
+      const segments = swipe.takeSegments();
+      // Compare the swipe against end-of-render-frame positions, even if the
+      // renderer needed multiple fixed steps to catch up.
+      for (let i = 0; i < steps; i++) {
+        round.update(CONFIG.STEP, round.interactive && i === steps - 1 ? segments : []);
+      }
+      acc = Math.max(0, acc - steps * CONFIG.STEP);
     }
     for (const e of round.state.entities) {
       views.get(e.id)?.update(e, dt);
