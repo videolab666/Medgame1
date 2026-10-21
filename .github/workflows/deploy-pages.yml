@@ -45,8 +45,7 @@ jobs:
           if [[ "$branch" != "gh-pages" || "$build_type" == "workflow" ]]; then
             echo "::notice::Switching Pages publishing source to gh-pages/(root)."
             if ! gh api --method PUT "repos/${GITHUB_REPOSITORY}/pages" -f build_type=legacy -f 'source[branch]=gh-pages' -f 'source[path]=/'; then
-              echo "::error::Cannot change Pages source with GITHUB_TOKEN. Open Settings > Pages and select Deploy from a branch > gh-pages > /(root)."
-              exit 1
+              echo "::warning::To show the latest game, set Settings > Pages > Deploy from a branch > gh-pages / (root). Continue publishing dist to gh-pages."
             fi
           fi
       - name: Publish dist to gh-pages branch
