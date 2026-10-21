@@ -6,15 +6,14 @@
 // out exactly where the plan puts them, in groups or as a mark in a string.
 // The microbe king is spawned by the round, which asks for him right here.
 //
-// `run` is the shared per-location trip from the save file: the slot cursor,
-// the accumulated speed of the repeating set and the regrowing weights live
-// there, so a new round continues exactly where the previous one stopped —
-// the way one classic arcade game keeps climbing. Without `run` (tests, tools)
-// the spawner keeps that state for itself.
+// Every play round begins with five introductory waves: four ordinary waves
+// and one isolated pair/singleton of non-sliceable friends. The shared run only
+// resumes after that introduction, preserving late-game speed and mix across
+// rounds. Old saved cursors are accepted without making the opening unsafe.
 import { CONFIG, LOCATIONS, gravityFor, typesFor } from './config.js';
 import { mulberry32, pick, range } from './rng.js';
 import { ECONOMY } from './economy.js';
-import { ANGLE_MAX, SAFE_SLOTS, SPEED_MIN_RATIO, WAVE_PLAN } from './waves.js';
+import { ANGLE_MAX, SAFE_SLOTS, SPEED_MIN_RATIO, INTRO_WAVES, WAVE_PLAN } from './waves.js';
 
 const CELL_GAP = 200;
 export const FIRST_WAVE_AT = 0.5;
@@ -37,7 +36,10 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
 
   // Wave state: absolute spawn times of the current wave, waiting in `queue`.
   const runState = run ?? { slot: 0, speeds: {}, weights: {} };
-  let slot = Math.min(runState.slot ?? 0, WAVE_PLAN.length - 1);
+  // This local counter starts from zero every round even if the save already
+  // reached the repeating hard waves. Saved progress is resumed after wave 5.
+  let openingSlot = 0;
+  let slot = Math.min(Math.max(runState.slot ?? INTRO_WAVES, INTRO_WAVES), WAVE_PLAN.length - 1);
   let nextWaveAt = FIRST_WAVE_AT;
   let queue = [];
   let wave = null;
@@ -64,7 +66,9 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
   }
 
   function startWave(t) {
-    const entry = WAVE_PLAN[Math.min(slot, WAVE_PLAN.length - 1)];
+    const inOpening = openingSlot < INTRO_WAVES;
+    const planSlot = inOpening ? openingSlot : slot;
+    const entry = WAVE_PLAN[planSlot];
     const picked = chooseWave(entry);
     wave = { ...picked.wave };
     // The repeating set climbs like the last waves of a classic run: every use of this exact
@@ -95,11 +99,19 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
     // can spread around a character it already knows about.
     queue.sort((a, b) => a.t - b.t
       || (a.spec === 'cell' ? -1 : b.spec === 'cell' ? 1 : 0));
-    wave.safe = slot < SAFE_SLOTS;
+    // During the four safe intro waves neither a bonus nor a golden star may
+    // be spawned, so nothing extra can drift across the solo fifth wave.
+    wave.safe = inOpening && openingSlot < SAFE_SLOTS;
     wave.batch = [];
     nextWaveAt = t0 + span + wave.end;
-    slot++;
-    runState.slot = Math.min(slot, WAVE_PLAN.length - 1);
+    if (inOpening) {
+      openingSlot++;
+      // After reaching the fifth wave, discard legacy saved cursors < 5.
+      if (openingSlot === INTRO_WAVES) runState.slot = slot;
+    } else {
+      slot = Math.min(slot + 1, WAVE_PLAN.length - 1);
+      runState.slot = slot;
+    }
   }
 
   function launch(e, opts = {}) {
