@@ -6,9 +6,9 @@
 export const CONFIG = Object.freeze({
   WORLD_W: 1000,
   ROUND_SEC: 60,
-  // Lives: three hearts, one lost per dropped
+  // Lives: ten hearts, one lost per dropped
   // microbe or fruit, one regained at the first 100 points and every 100 after.
-  MAX_LIVES: 3,
+  MAX_LIVES: 10,
   // Hearts and "touching a friendly character ends the round early" (always
   // with the reward screen — spec R6). Set false for a round that only ends
   // on time: characters then just giggle and break the combo.
