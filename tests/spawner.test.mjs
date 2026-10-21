@@ -240,40 +240,54 @@ test('tummy friendly character is the good bacterium', () => {
   assert.ok(cells.length > 0 && cells.every((e) => e.type === 'dobryk'));
 });
 
-// ── the endless trip across rounds ──
-// One run per location, cut into rounds by the timer: the slot cursor, the
-// speeds of the repeating set and the regrowing weights live in the shared
-// `run`.
+// ── per-round safe opening + endless difficulty after the fifth wave ──
+// A location's later-wave slot, speeds and weights survive across rounds,
+// but its first five waves restart safely in each new round.
 
 const step = (sp, sec) => drive(sp, sec);
 
-test('a round continues the trip from the saved slot', async () => {
+test('even a legacy saved slot begins with four safe waves and one isolated hazard', async () => {
   const { WAVE_PLAN } = await import('../src/core/waves.js');
-  const trip = { slot: 4, speeds: {}, weights: {} }; // the "don't touch" lesson
-  const sp = createSpawner({
-    rng: mulberry32(3), width: 1000, height: H, location: 'hands', mode: 'play', duration: 40, run: trip,
-  });
-  const born = step(sp, 2); // only the lesson's own throws are out by then
-  assert.ok(born.length > 0);
-  assert.ok(born.every((e) => e.kind === 'cell'), born.map((e) => e.kind).join(','));
-  assert.ok(trip.slot > 4 && trip.slot < WAVE_PLAN.length, `cursor moved from the saved slot (${trip.slot})`);
+  for (const saved of [0, 4, 7, WAVE_PLAN.length - 1]) {
+    const trip = { slot: saved, speeds: {}, weights: {} };
+    const sp = createSpawner({
+      rng: mulberry32(3), width: 1000, height: H, location: 'hands',
+      mode: 'play', duration: 120, run: trip,
+    });
+    const w = waves(step(sp, 90));
+    assert.ok(w.length >= 6, `saved ${saved}: only ${w.length} waves`);
+    for (const group of w.slice(0, 4)) {
+      assert.ok(group.every((e) => e.kind === 'microbe' || e.kind === 'fruit'),
+        `saved ${saved}: unexpected opening hazard or bonus`);
+    }
+    assert.ok(w[4].length >= 1 && w[4].length <= 2, `saved ${saved}: fifth wave size ${w[4].length}`);
+    assert.ok(w[4].every((e) => e.kind === 'cell'), `saved ${saved}: fifth wave is not isolated`);
+    assert.ok(w[4].every((e) => e.ts === 0.75), 'the introductory hazard stays slow');
+    assert.ok(trip.slot >= Math.max(saved, 5), `saved cursor went backwards: ${trip.slot}`);
+  }
 });
 
-test('the next round starts exactly where the previous one stopped', async () => {
-  const { WAVE_PLAN } = await import('../src/core/waves.js');
-  const trip = { slot: 0, speeds: {}, weights: {} };
+test('each new round restarts the safe intro without resetting earned difficulty', () => {
+  const trip = { slot: 8, speeds: {}, weights: {} };
   const first = createSpawner({
-    rng: mulberry32(11), width: 1000, height: H, location: 'hands', mode: 'play', duration: 20, run: trip,
+    rng: mulberry32(11), width: 1000, height: H, location: 'hands', mode: 'play', duration: 90, run: trip,
   });
-  step(first, 20);
+  const firstWaves = waves(step(first, 70));
+  assert.ok(firstWaves[0].every((e) => e.kind !== 'cell'));
+  assert.ok(firstWaves[4].every((e) => e.kind === 'cell'));
   const saved = trip.slot;
-  assert.ok(saved >= 3, `a 20 s round consumed ${saved} slots`);
-
+  assert.ok(saved > 8, `progress was not advanced (${saved})`);
   const second = createSpawner({
-    rng: mulberry32(12), width: 1000, height: H, location: 'hands', mode: 'play', duration: 40, run: trip,
+    rng: mulberry32(12), width: 1000, height: H, location: 'hands', mode: 'play', duration: 90, run: trip,
   });
-  step(second, 0.7); // just past the first wave start (0.5 s)
-  assert.equal(trip.slot, Math.min(saved + 1, WAVE_PLAN.length - 1), 'the very next slot started');
+  const born = step(second, 2);
+  assert.equal(born.length, 1);
+  assert.ok(born.every((e) => e.kind === 'microbe' || e.kind === 'fruit'));
+  assert.equal(trip.slot, saved, 'opening may not consume later-stage progression');
+  const later = waves(step(second, 60));
+  assert.ok(later.some((group) => group.every((e) => e.kind === 'cell')),
+    'fifth-wave hazard is still scheduled');
+  assert.ok(trip.slot >= saved, 'difficulty must be retained');
 });
 
 test('the repeating set speeds up use by use and keeps it across rounds', async () => {
@@ -310,18 +324,18 @@ test('the repeating set never exceeds its speed cap', async () => {
 });
 
 test('set weights live in the trip, not in the spawner', () => {
-  const trip = { slot: 5, speeds: {}, weights: {} }; // first set A slot
+  const trip = { slot: 5, speeds: {}, weights: {} }; // resume set A after the intro
   const sp = createSpawner({
-    rng: mulberry32(41), width: 1000, height: H, location: 'hands', mode: 'play', duration: 12, run: trip,
+    rng: mulberry32(41), width: 1000, height: H, location: 'hands', mode: 'play', duration: 100, run: trip,
   });
-  step(sp, 12);
+  step(sp, 45);
   const w = trip.weights.a;
   assert.ok(Array.isArray(w) && w.length === 2, `weights ${JSON.stringify(trip.weights)}`);
   assert.ok(w.includes(0), 'the just-picked option sits at zero');
   const next = createSpawner({
     rng: mulberry32(42), width: 1000, height: H, location: 'hands', mode: 'play', duration: 40, run: trip,
   });
-  step(next, 0.7); // one more pick happens in the next round
+  step(next, 25); // after the safe introduction the existing weights are reused
   assert.equal(trip.weights.a, w, 'the next round reuses the very same weights');
 });
 
@@ -360,5 +374,21 @@ test('each location has exactly one stable forbidden character type across seede
       assert.ok(forbidden.every((e) => e.type === expected[loc]), loc);
     }
     assert.ok(total > 0, loc);
+  }
+});
+
+test('every location and every saved late slot opens with four safe waves, then 1–2 matching hazards only', async () => {
+  const { HAZARD_CHARACTER, LOCATION_ORDER } = await import('../src/core/config.js');
+  for (const location of LOCATION_ORDER) for (const seed of [1, 11, 33]) {
+    const trip = { slot: 22, speeds: { e0: 1.3 }, weights: {} };
+    const w = waves(run({ location, run: trip, duration: 100 }, 60, seed));
+    assert.ok(w.length > 5, `${location}/${seed}: too few waves`);
+    for (const [i, group] of w.slice(0, 4).entries()) {
+      assert.ok(group.every((e) => e.kind === 'fruit' || e.kind === 'microbe'),
+        `${location}/${seed}: unsafe wave ${i + 1}`);
+    }
+    assert.ok(w[4].length === 1 || w[4].length === 2);
+    assert.ok(w[4].every((e) => e.kind === 'cell' && e.type === HAZARD_CHARACTER[location]),
+      `${location}/${seed}: wrong fifth-wave composition`);
   }
 });
