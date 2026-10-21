@@ -105,7 +105,11 @@ export const WAVE_PLAN = [
 ];
 
 // Waves before this slot never contain bonuses.
-export const SAFE_SLOTS = 2;
+export const SAFE_SLOTS = 4;
+
+// Every round starts with four sliceable waves. The fifth wave is the first
+// hazard encounter: exactly 1–2 friends alone, with no fruit, microbes or stars.
+export const INTRO_WAVES = 5;
 
 // Objects are thrown upward within ±12° of vertical; speed varies 10.1–11.5
 // (relative), so the apex varies by (10.1 / 11.5)² ≈ 0.77 of the highest throw.
