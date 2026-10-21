@@ -103,6 +103,11 @@ export function createSynth() {
     chime() {
       [0, 4, 7, 12].forEach((s, k) => tone(midiHz(BASE_MIDI + s), { at: k * 0.07, decay: 0.6, gain: 0.16 }));
     },
+    warning() {
+      // A brief gentle two-tone cue, never a siren or alarming buzzer.
+      tone(660, { type: 'sine', decay: 0.16, gain: 0.075 });
+      tone(520, { type: 'sine', at: 0.18, decay: 0.2, gain: 0.07 });
+    },
     sparkle() {
       for (let k = 0; k < 5; k++) tone(midiHz(BASE_MIDI + 12 + PENTA[k]), { at: k * 0.045, decay: 0.18, gain: 0.07 });
     },
@@ -155,6 +160,7 @@ export function createSynth() {
     slice: () => fire('slice', procedural.squish, { gain: 0.7 }),
     drop: () => fire('drop', procedural.bloop, { gain: 0.6 }),
     giggle: () => fire('giggle', procedural.giggle),
+    warning: () => { if (ready()) procedural.warning(); },
     combo: () => fire('combo', procedural.chime),
     wave: () => fire('wave', procedural.whoosh),
     shield: () => fire('shield', procedural.chime),
