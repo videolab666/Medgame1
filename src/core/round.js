@@ -294,7 +294,7 @@ export function createRound({
 
       if (!state.ended) {
         if (!state.kingActive) state.spawnTime += dt;
-        for (const e of spawner.update(state.spawnTime, dt, state.entities.length)) {
+        for (const e of spawner.update(state.spawnTime, dt, state.entities.length, state.entities)) {
           state.entities.push(e);
           emit('spawn', e);
         }

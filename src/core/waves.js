@@ -11,6 +11,8 @@
 // inclusive [min, max] count. `ts` slows (or speeds) the flight of that wave's
 // objects; `inc` makes every repeat of the final slot a little faster.
 //
+// The spawner separates any planned mixed wave into non-overlapping phases:
+// sliceables first, then (after they leave and 0.7 s passes) forbidden friends.
 // A group is one of three: a sliceable roll (microbe/fruit), `kind: 'cell'`
 // (characters the child must not touch — the classic bombs), or a `seq`
 // pattern where 's' is a sliceable throw and 'c' the forbidden one: "ssc"

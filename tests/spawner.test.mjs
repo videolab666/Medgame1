@@ -24,7 +24,7 @@ const drive = (sp, sec) => {
         f.e.goneAt = t;
       }
     }
-    for (const e of sp.update(t, STEP, flying.filter((f) => f.e.alive).length)) {
+    for (const e of sp.update(t, STEP, flying.filter((f) => f.e.alive).length, flying.map((f) => f.e))) {
       out.push(e);
       flying.push({ e, s: { ...e } });
     }
@@ -120,16 +120,16 @@ test('forbidden characters follow one plan for every location', () => {
   assert.ok(cells('blood') > 0);
 });
 
-test('sequence stages mark their forbidden character exactly', () => {
-  // 'ssc'/'sssc'/'sssssc' groups: in a string that is not thrown together the
-  // single character sits at the third, fourth or sixth throw.
-  for (let seed = 1; seed < 8; seed++) {
-    for (const w of waves(run({}, 120, seed))) {
-      const cells = w.map((e, i) => [e, i]).filter(([e]) => e.kind === 'cell');
-      if (cells.length !== 1 || w.length < 4) continue;
-      if (w[w.length - 1].born - w[0].born < 0.4) continue;
-      assert.ok([2, 3, 5].includes(cells[0][1]), `seed ${seed}: length ${w.length}, character at ${cells[0][1]}`);
+test('forbidden characters launch in dedicated groups, never mixed with sliceables', () => {
+  for (let seed = 1; seed < 16; seed++) {
+    let hazardGroups = 0;
+    for (const group of waves(run({ duration: 150 }, 120, seed))) {
+      if (!group.some((e) => e.kind === 'cell')) continue;
+      hazardGroups++;
+      assert.ok(group.every((e) => e.kind === 'cell'),
+        `seed ${seed}: hazard group was mixed with ${group.map((e) => e.kind)}`);
     }
+    assert.ok(hazardGroups >= 2, `seed ${seed}: no repeated hazard group`);
   }
 });
 
@@ -166,44 +166,50 @@ test('objects are the configured size', () => {
   assert.ok(run({}, 30).every((e) => e.r === CONFIG.RADIUS));
 });
 
-test('a rolled microbe never appears next to a character already in the air', () => {
-  // The child must not see a microbe fly out hugging a character: a roll that
-  // comes after a planned character dodges up to six times, and a microbe that
-  // still cannot keep CELL_GAP turns into fruit (see emitOne).
-  for (const w of waves(run({ location: 'blood' }, 120))) {
-    const seen = [];
-    for (const e of w) {
-      if (e.kind === 'cell') seen.push(e);
-      else if (e.kind === 'microbe') {
-        for (const c of seen) {
-          assert.ok(Math.abs(c.x - e.x) >= 200,
-            `a microbe appears ${Math.abs(c.x - e.x).toFixed(1)} units from a character @${e.born.toFixed(2)} s`);
-        }
-      }
+// The previous horizontal-distance workaround allowed opposite launch
+// directions, narrow screens and side collectibles to collide with hazards.
+// Assert non-overlapping *flight times* instead, at the actual spawn frames.
+function assertSafeFlights({ width = 1000, location = 'blood', seed = 5, duration = 120 }) {
+  const sp = createSpawner({
+    rng: mulberry32(seed), width, height: H, location, mode: 'play', duration,
+  });
+  const flying = [];
+  let dangerEvents = 0;
+  let normalEvents = 0;
+  for (let i = 0; i * STEP < duration; i++) {
+    const t = i * STEP;
+    for (const f of flying) {
+      if (!f.e.alive) continue;
+      stepEntity(f.shadow, STEP, f.e.gravity ?? gravityFor(H));
+      if (isOffscreen(f.shadow, H, width)) f.e.alive = false;
     }
+    const alive = flying.filter((f) => f.e.alive).map((f) => f.e);
+    const spawned = sp.update(t, STEP, alive.length, alive);
+    for (const e of spawned) {
+      const opposite = e.kind === 'cell'
+        ? (x) => x.kind !== 'cell' && x.kind !== 'king'
+        : (x) => x.kind === 'cell';
+      assert.ok(!alive.some(opposite),
+        `unsafe overlap ${location}/${width}/${seed} at ${t.toFixed(2)}: ${e.kind} with ${alive.map((x) => x.kind)}`);
+      if (e.kind === 'cell') dangerEvents++;
+      else normalEvents++;
+      alive.push(e); // same-frame launches must also be checked
+      flying.push({ e, shadow: { ...e } });
+    }
+  }
+  assert.ok(dangerEvents > 0);
+  assert.ok(normalEvents > 0);
+}
+
+test('live mixed waves separate hazard and normal flights across many random seeds', () => {
+  for (const seed of [1, 2, 5, 7, 11, 13, 21, 29, 42]) {
+    assertSafeFlights({ seed, duration: 120 });
+    assertSafeFlights({ seed, location: 'mouth', duration: 120 });
   }
 });
 
-test('a rolled microbe next to a character downgrades to fruit (narrow world)', () => {
-  // On a 320-wide world there is nowhere to spread, so every sliceable rolled
-  // after a character in the same wave hits the fallback: it must become a
-  // fruit instead of crashing on a re-assigned const.
-  let mixed = 0;
-  for (let seed = 1; seed < 12; seed++) {
-    for (const w of waves(run({ width: 320, duration: 300 }, 90, seed))) {
-      const cells = [];
-      for (const e of w) {
-        if (e.kind === 'cell') cells.push(e);
-        else if (e.kind === 'microbe') {
-          assert.ok(cells.every((c) => Math.abs(c.x - e.x) >= 200),
-            `seed ${seed}: microbe at ${e.x} next to a character`);
-        } else if (e.kind === 'fruit' && cells.length && Math.abs(cells[0].x - e.x) < 200) {
-          mixed++;
-        }
-      }
-    }
-  }
-  assert.ok(mixed > 0, 'no mixed character+sliceable wave was thrown in 90 s');
+test('hazard separation works on narrow 320-unit screens too', () => {
+  for (const seed of [1, 4, 9, 17]) assertSafeFlights({ width: 320, seed, duration: 120 });
 });
 
 test('the king maker launches him from a side, on his own gravity', () => {
