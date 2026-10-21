@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createProgress, memoryStorage, STICKERS } from '../src/core/progress.js';
 import { mulberry32 } from '../src/core/rng.js';
+import { CONFIG } from '../src/core/config.js';
 
 test('only hands unlocked at start; kitchen after 3 rounds', () => {
   const p = createProgress(memoryStorage(), { unlockAll: false });
@@ -136,12 +137,12 @@ test('achievements are earned and marked new once', () => {
   };
   assert.equal(p.completeRound('hands', mulberry32(1), quiet).achievements.length, 0);
   const star = {
-    score: 6, vitamins: 0, bestCombo: 5, lives: 3, reason: 'time', sliced: 30, missed: 0, kingHits: 0,
+    score: 6, vitamins: 0, bestCombo: 5, lives: CONFIG.MAX_LIVES, reason: 'time', sliced: 30, missed: 0, kingHits: 0,
   };
   const a = p.completeRound('hands', mulberry32(2), star);
   assert.deepEqual(
     a.achievements.map((x) => x.id).sort(),
-    ['combo5', 'noMiss', 'swift', 'threeHearts'],
+    ['combo5', 'noMiss', 'swift', 'allHearts'],
   );
   assert.ok(a.achievements.every((x) => x.isNew));
   const b = p.completeRound('hands', mulberry32(3), star);
