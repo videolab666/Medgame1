@@ -343,3 +343,22 @@ test('golden stars: rare, from a side, never in the opening, never shift the pla
   }
   assert.ok(total > 0, 'some golden stars over 40 rounds');
 });
+
+test('each location has exactly one stable forbidden character type across seeded waves', async () => {
+  const { HAZARD_CHARACTER, LOCATION_ORDER, typesFor } = await import('../src/core/config.js');
+  const expected = {
+    hands: 'bilyk', kitchen: 'bilyk', blood: 'chervonya',
+    mouth: 'zubchyk', tummy: 'dobryk', skin: 'latochka',
+  };
+  assert.deepEqual(HAZARD_CHARACTER, expected);
+  for (const loc of LOCATION_ORDER) {
+    assert.deepEqual(typesFor(loc).cell, [expected[loc]], loc);
+    let total = 0;
+    for (let seed = 1; seed <= 6; seed++) {
+      const forbidden = run({ location: loc }, 90, seed).filter((e) => e.kind === 'cell');
+      total += forbidden.length;
+      assert.ok(forbidden.every((e) => e.type === expected[loc]), loc);
+    }
+    assert.ok(total > 0, loc);
+  }
+});
