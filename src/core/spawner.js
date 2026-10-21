@@ -2,8 +2,9 @@
 // Throws follow WAVE_PLAN (src/core/waves.js): one object, then growing groups,
 // some thrown together, some as quick strings. The tempo is the live one: the
 // only pause between series is the next series' own short lead-in.
-// Characters the child must not touch ("cells") are never random: they fly
-// out exactly where the plan puts them, in groups or as a mark in a string.
+// Characters the child must not touch ("cells") are never random. In a
+// mixed planned wave the normal objects fly first and must leave the screen
+// before forbidden friends launch as their own group, avoiding unwinnable cuts.
 // The microbe king is spawned by the round, which asks for him right here.
 //
 // Every play round begins with five introductory waves: four ordinary waves
@@ -15,7 +16,8 @@ import { mulberry32, pick, range } from './rng.js';
 import { ECONOMY } from './economy.js';
 import { ANGLE_MAX, SAFE_SLOTS, SPEED_MIN_RATIO, INTRO_WAVES, WAVE_PLAN } from './waves.js';
 
-const CELL_GAP = 200;
+// A short visual break between sliceable objects and forbidden friends.
+export const HAZARD_PHASE_GAP = 0.7;
 export const FIRST_WAVE_AT = 0.5;
 const SPEED_UP_MAX = 1.5;
 
@@ -95,10 +97,17 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
       }
       span = Math.max(span, (n - 1) * g.gap);
     }
-    // Same-instant throws: characters leave first, so every roll after them
-    // can spread around a character it already knows about.
-    queue.sort((a, b) => a.t - b.t
-      || (a.spec === 'cell' ? -1 : b.spec === 'cell' ? 1 : 0));
+    // Preserve every planned object, but never launch sliceable objects next
+    // to a forbidden friend. The latter form a separate, delayed sub-wave.
+    // A fixed horizontal gap is not enough: independent launch angles and
+    // velocities can cause trajectories to cross even if spawn Xs differ.
+    const hazards = queue.filter((item) => item.spec === 'cell');
+    queue = queue.filter((item) => item.spec !== 'cell');
+    queue.sort((a, b) => a.t - b.t);
+    wave.hazards = hazards;
+    wave.mixed = hazards.length > 0 && queue.length > 0;
+    wave.hazardEarliest = t0;
+    wave.hazardReadyAt = null;
     // During the four safe intro waves neither a bonus nor a golden star may
     // be spawned, so nothing extra can drift across the solo fifth wave.
     wave.safe = inOpening && openingSlot < SAFE_SLOTS;
@@ -163,16 +172,6 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
     return plainKind();
   }
 
-  // A character keeps its distance from every thrown object and vice versa:
-  // any roll (microbe, fruit or bonus) too close to a planned character is
-  // re-placed, and a microbe that still cannot dodge turns into fruit. The
-  // check never looks at which sliceable kind it is, so the random stream —
-  // and with it the whole plan — stays identical in every location.
-  const conflicts = (kind, x, list) => list.some((o) => {
-    const pair = (kind === 'cell') !== (o.kind === 'cell');
-    return pair && Math.abs(o.x - x) < CELL_GAP;
-  });
-
   // Objects thrown at the same instant spread across the width.
   function pickX(sameTime) {
     let best = range(rng, margin, width - margin);
@@ -186,15 +185,10 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
   }
 
   function emitOne(t, sameTime, spec = 'roll') {
-    // A character flies only where the plan says so; everything else rolls.
-    // Pattern throws never roll a bonus, so a string keeps its rhythm.
-    let kind = spec === 'cell' ? 'cell'
+    // Mixed waves are split into two physically independent phases.
+    const kind = spec === 'cell' ? 'cell'
       : (spec === 'plain' || wave.safe) ? plainKind() : rollKind();
-    let x = pickX(sameTime);
-    for (let tries = 0; tries < 6 && conflicts(kind, x, wave.batch); tries++) x = pickX(sameTime);
-    // A rolled microbe too close to a planned character becomes fruit; a
-    // planned character stays one whatever happens (pickX spreads throws).
-    if (kind === 'microbe' && conflicts(kind, x, wave.batch)) kind = 'fruit';
+    const x = pickX(sameTime);
     if (kind === 'bonus') bonuses++;
     const e = make(kind, pick(rng, TYPES[kind]), x, t, { side: kind === 'bonus', ts: wave.tsScale ?? 1 });
     wave.batch.push(e);
@@ -203,6 +197,8 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
       && goldRng() < ECONOMY.GOLD_CHANCE) {
       golds++;
       pendingGold = make('gold', 'goldstar', x, t, { side: true }, goldRng);
+      // Side collectibles must disappear before the danger sub-wave too.
+      wave.batch.push(pendingGold);
     }
     return e;
   }
@@ -243,7 +239,7 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
     // Spawns the king for the round loop (lives, slices and the burst live in
     // src/core/round.js — the wave queue never contains him).
     king: makeKing,
-    update(t, dt, alive) {
+    update(t, dt, alive, activeEntities = []) {
       if (mode === 'calm') {
         if (t < calmNextAt) return [];
         return calmBatch(t, alive);
@@ -252,7 +248,7 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
       // or fallen off the screen (measured on the reference game: the next
       // series leaves ~1 s after the previous fruit disappears). Side-drifting
       // bonuses and the king do not hold the next wave back.
-      if (wave && !wave.cleared && queue.length === 0
+      if (wave && !wave.cleared && queue.length === 0 && wave.hazards.length === 0
         && wave.batch.every((e) => !e.alive || e.kind === 'bonus' || e.kind === 'king' || e.kind === 'gold')) {
         wave.cleared = true;
         nextWaveAt = Math.max(nextWaveAt, t + wave.end);
@@ -268,6 +264,26 @@ export function createSpawner({ rng, width, height, location, mode, duration = C
         if (pendingGold) {
           out.push(pendingGold);
           pendingGold = null;
+        }
+      }
+      if (wave?.hazards.length && queue.length === 0) {
+        // The intro fifth wave is solo by construction. For later mixed waves,
+        // wait until *every* ordinary icon/bonus/star has disappeared, including
+        // drifting collectibles from the previous wave. No spatial guesswork.
+        const blockers = wave.batch.some((e) => e.alive && e.kind !== 'cell')
+          || activeEntities.some((e) => e.alive && e.kind !== 'cell' && e.kind !== 'king');
+        if (blockers) {
+          wave.hazardReadyAt = null;
+        } else if (wave.hazardReadyAt === null) {
+          wave.hazardReadyAt = Math.max(t, wave.hazardEarliest)
+            + (wave.mixed ? HAZARD_PHASE_GAP : 0);
+        }
+        if (t > duration - 0.4) {
+          wave.hazards = []; // Never hold a finished round for a deferred hazard.
+        } else if (wave.hazardReadyAt !== null && t >= wave.hazardReadyAt) {
+          for (const hazard of wave.hazards) out.push(emitOne(t, out, hazard.spec));
+          wave.hazards = [];
+          wave.hazardReadyAt = null;
         }
       }
       return out;
