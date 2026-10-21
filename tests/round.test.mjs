@@ -61,7 +61,7 @@ test('without lives a cell only breaks the combo and misses cost nothing', () =>
   }
   assert.ok(!ended && !r.state.ended);
   assert.equal(r.state.lives, CONFIG.MAX_LIVES);
-  assert.equal(r.state.missed, 3);
+  assert.equal(r.state.missed, CONFIG.MAX_LIVES);
 });
 
 test('classic lives: touching a cell ends the round at once, like a bomb', () => {
@@ -86,7 +86,7 @@ test('classic lives: a dropped object costs a heart and ten misses end the round
   let sum = null;
   r.on('miss', (e, lives) => missed.push(lives));
   r.on('end', (s) => { sum = s; });
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < CONFIG.MAX_LIVES; i++) {
     const e = ent('microbe', 'chykhunchyk', 500, 2400);
     e.vy = 300;
     r._inject(e);
@@ -112,12 +112,12 @@ test('classic lives: hearts come back at 100 points, then every 100', () => {
   r.state.vitamins = 9;
   r._inject(ent('fruit', 'kiwi', 500, 500));
   r.update(STEP, cut(500, 500));
-  assert.equal(r.state.lives, 3);
+  assert.equal(r.state.lives, CONFIG.MAX_LIVES);
   // 200 points pass with full hearts: nothing pops, the mark moves to 300.
   r.state.score = 199;
   r._inject(ent('microbe', 'chykhunchyk', 500, 500));
   r.update(STEP, cut(500, 500));
-  assert.equal(r.state.lives, 3);
+  assert.equal(r.state.lives, CONFIG.MAX_LIVES);
   assert.equal(r.state.nextLifeAt, 300);
   assert.deepEqual(lives, [CONFIG.MAX_LIVES]);
 });
