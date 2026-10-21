@@ -32,11 +32,13 @@ Dev-only параметри URL: `?quality=high|mid|low` — примусова 
 
 ## Публікація
 
+Публікація **автоматична**: кожен push у `main` запускає workflow [Publish game to GitHub Pages](.github/workflows/deploy-pages.yml), що виконує тести, перевірки, збірку PWA і відправляє `dist/` до гілки `gh-pages`, після чого запитує оновлення GitHub Pages. Також його можна запускати вручну на вкладці **Actions**.
+
 ```sh
-npm run deploy     # tests + validate + build, then pushes dist/ to the gh-pages branch
+npm run deploy     # альтернативне локальне розгортання
 ```
 
-GitHub Pages: **Settings → Pages → Source: Deploy from a branch → `gh-pages` / `(root)`**. Push у `main` лише перевіряє код (workflow `Test and build`); сайт оновлюється після `npm run deploy`.
+GitHub Pages: **Settings → Pages → Source: Deploy from a branch → `gh-pages` / `(root)`**.
 
 Інший хостинг: `npm run build` і скопіювати вміст `dist/` (або вміст гілки `gh-pages`) у будь-яку папку сайту — шляхи відносні. Потрібен HTTPS (інакше не працює офлайн-режим); `sw.js` та `index.html` не кешувати надовго.
 

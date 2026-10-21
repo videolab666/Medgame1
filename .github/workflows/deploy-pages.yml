@@ -1,0 +1,49 @@
+name: Publish game to GitHub Pages
+
+# Builds and publishes the Vite/PWA distribution after each change on main.
+# The source of the Pages site remains gh-pages / (root).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: medgame1-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run unit tests
+        run: npm test
+      - name: Validate content and licenses
+        run: npm run validate
+      - name: Build PWA
+        run: npm run build
+      - name: Publish dist to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./dist
+          enable_jekyll: false
+          commit_message: "deploy: build of ${{ github.sha }}"
+      # A gh-pages push by GITHUB_TOKEN does not itself trigger a Pages build.
+      # Explicit Pages API build request avoids a stale public site.
+      - name: Request GitHub Pages build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/builds"
