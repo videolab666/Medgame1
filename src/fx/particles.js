@@ -101,6 +101,22 @@ export function createParticles(layer, { max = 2000 } = {}) {
         });
       }
     },
+    // Subtle cartoon smoke and amber sparkles following only forbidden friends.
+    // Designed for <= 10 emissions/s each, bounded by the particle pool.
+    warningTrail(x, y, { vx = 0, vy = 0 } = {}) {
+      spawn({
+        frame: frames.dot, x: x + rand(-14, 14), y: y + rand(-14, 14),
+        vx: rand(-35, 35) - vx * 0.06, vy: rand(-30, 10) - vy * 0.06,
+        drag: 0.96, life: rand(0.55, 0.9),
+        size: rand(44, 72), grow: 1.15, fadeIn: 0.08,
+        color: pickOf([0xc7d1df, 0xb9c9dc, 0xd8d4e9]),
+      });
+      if (Math.random() < 0.55) spawn({
+        frame: frames.star, x: x + rand(-14, 14), y: y + rand(-14, 14),
+        vx: rand(-70, 70), vy: rand(-75, 35), drag: 0.92,
+        life: rand(0.22, 0.42), size: rand(12, 22), color: 0xffac3b,
+      });
+    },
     // A trail bit of a given shape (stars, hearts, rings, confetti…).
     trailBit(x, y, { frame = 'sparkle', color = 0xffffff } = {}) {
       spawn({
