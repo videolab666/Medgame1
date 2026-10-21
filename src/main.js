@@ -17,6 +17,7 @@ import { pickFact } from './core/content.js';
 import { pickQuality } from './core/quality.js';
 import { createFlashGuard } from './core/flashGuard.js';
 import { mulberry32 } from './core/rng.js';
+import { STORY, beforeLocation, afterRound } from './core/story.js';
 import { createStage } from './render/stage.js';
 import { loadArt } from './render/svg.js';
 import { createEntityView } from './render/entity.js';
@@ -85,6 +86,7 @@ const views = new Map();
 let round = null;
 let background = null;
 let scene = 'title';
+let activeStory = null;
 let currentLoc = progress.lastUnlocked();
 let paused = false;
 let acc = 0;
@@ -233,6 +235,7 @@ function finishRound(loc, summary, wasTutorial) {
 }
 
 function goTitle() {
+  activeStory = null;
   // Leaving a long-enough calm session moves the calm tasks.
   if (scene === 'calm' && performance.now() - calmStartedAt >= CALM_TASK_SEC * 1000) {
     const r = progress.recordCalm();
@@ -291,16 +294,49 @@ function pause() {
   ui.showPause();
 }
 
-// ------------------------------------------------------------------ UI events
-ui.on('play', (loc) => {
-  // First visit to a location: show what to wash, collect and leave alone.
-  if (!(progress.state.rounds[loc] > 0)) {
-    introLoc = loc;
-    synth.unlock();
-    ui.showIntro('start', loc);
+// Narrated scenes can be advanced or skipped. Only completed/skipped scenes
+// are recorded; an interrupted conversation reappears after a reload.
+function showStorySequence(ids, done) {
+  const queue = ids.filter((id) => STORY[id] && !progress.hasSeenStory(id));
+  const next = () => {
+    const id = queue.shift();
+    if (!id) { done(); return; }
+    activeStory = { id, page: 0, next };
+    scene = 'story';
+    ui.showStory(STORY[id], 0);
+  };
+  next();
+}
+
+function advanceStory(skip = false) {
+  if (!activeStory) return;
+  const current = activeStory;
+  if (!skip && current.page + 1 < STORY[current.id].pages.length) {
+    current.page++;
+    ui.showStory(STORY[current.id], current.page);
     return;
   }
-  prep(loc);
+  progress.markStorySeen(current.id);
+  activeStory = null;
+  current.next();
+}
+
+// ------------------------------------------------------------------ UI events
+ui.on('story-next', () => advanceStory());
+ui.on('story-skip', () => advanceStory(true));
+ui.on('play', (loc) => {
+  if (!progress.isUnlocked(loc)) return;
+  currentLoc = loc;
+  synth.unlock();
+  showStorySequence(beforeLocation(progress.state, loc), () => {
+    // Keep the original illustrated "how to play" card in each location.
+    if (!(progress.state.rounds[loc] > 0)) {
+      introLoc = loc;
+      ui.showIntro('start', loc);
+    } else {
+      prep(loc);
+    }
+  });
 });
 ui.on('how', () => ui.showIntro('info', currentLoc));
 ui.on('intro-go', () => {
@@ -364,14 +400,17 @@ ui.on('menu', () => {
   goTitle();
 });
 ui.on('again', () => {
-  if (lastReward?.rest) {
-    lastReward = null;
-    scene = 'rest';
-    ui.showRest();
-    music.play('rest');
-    return;
-  }
-  prep(currentLoc);
+  const advance = () => {
+    if (lastReward?.rest) {
+      lastReward = null;
+      scene = 'rest';
+      ui.showRest();
+      music.play('rest');
+      return;
+    }
+    prep(currentLoc);
+  };
+  showStorySequence(afterRound(progress.state, currentLoc), advance);
 });
 ui.on('again-now', () => prep(currentLoc));
 ui.on('pause', pause);
