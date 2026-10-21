@@ -53,14 +53,14 @@ test('without lives a cell only breaks the combo and misses cost nothing', () =>
   r._inject(c);
   r.update(STEP, cut(700, 900));
   assert.equal(r.state.combo, 0);
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < CONFIG.MAX_LIVES; i++) {
     const e = ent('microbe', 'chykhunchyk', 500, 2400);
     e.vy = 300;
     r._inject(e);
     r.update(STEP, []);
   }
   assert.ok(!ended && !r.state.ended);
-  assert.equal(r.state.lives, 3);
+  assert.equal(r.state.lives, CONFIG.MAX_LIVES);
   assert.equal(r.state.missed, 3);
 });
 
@@ -77,10 +77,10 @@ test('classic lives: touching a cell ends the round at once, like a bomb', () =>
   assert.equal(touched, 1);
   assert.ok(r.state.ended);
   assert.equal(sum.reason, 'cell');
-  assert.equal(sum.lives, 3);
+  assert.equal(sum.lives, CONFIG.MAX_LIVES);
 });
 
-test('classic lives: a dropped object costs a heart and three misses end the round', () => {
+test('classic lives: a dropped object costs a heart and ten misses end the round', () => {
   const r = mk({ gameOver: true });
   const missed = [];
   let sum = null;
@@ -92,7 +92,7 @@ test('classic lives: a dropped object costs a heart and three misses end the rou
     r._inject(e);
     r.update(STEP, []);
   }
-  assert.deepEqual(missed, [2, 1, 0]);
+  assert.deepEqual(missed, Array.from({length: CONFIG.MAX_LIVES}, (_,i)=> CONFIG.MAX_LIVES - i - 1));
   assert.ok(r.state.ended);
   assert.equal(sum.reason, 'lives');
   assert.equal(sum.lives, 0);
@@ -106,7 +106,7 @@ test('classic lives: hearts come back at 100 points, then every 100', () => {
   drop.vy = 300;
   r._inject(drop);
   r.update(STEP, []);
-  assert.equal(r.state.lives, 2);
+  assert.equal(r.state.lives, CONFIG.MAX_LIVES - 1);
   // 99 points + 1 slice = the first heart.
   r.state.score = 99 - 9;
   r.state.vitamins = 9;
@@ -119,7 +119,7 @@ test('classic lives: hearts come back at 100 points, then every 100', () => {
   r.update(STEP, cut(500, 500));
   assert.equal(r.state.lives, 3);
   assert.equal(r.state.nextLifeAt, 300);
-  assert.deepEqual(lives, [3]);
+  assert.deepEqual(lives, [CONFIG.MAX_LIVES]);
 });
 
 test('inactive segment does nothing in play', () => {
