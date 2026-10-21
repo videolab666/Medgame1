@@ -334,8 +334,9 @@ export function createUI(root, { progress, onTap = () => {} }) {
       const pools = typesFor(loc);
       const friend = FRIEND_NOTE[pools.cell[0]] ?? 'Вони захищають тіло';
       const row = (arts, title, sub, ok) => `
-        <div class="how-row pop">
-          <div class="how-imgs">${arts.map((a) => img(a, 'how-img')).join('')}</div>
+        <div class="how-row pop ${ok ? '' : 'hazard-how-row'}">
+          <div class="how-imgs">${arts.map((a) => ok ? img(a, 'how-img')
+            : `<span class="hazard-example">${img(a, 'how-img')}<b aria-hidden="true">!</b></span>`).join('')}</div>
           <div class="how-text"><b>${title}</b><span>${sub}</span></div>
           <span class="how-mark ${ok ? 'ok' : 'no'}">${ok ? '✓' : '✕'}</span>
         </div>`;
@@ -346,7 +347,7 @@ export function createUI(root, { progress, onTap = () => {} }) {
           ${row(['heart'], 'Бережи сердечка!', 'Мимо — мінус сердечко', true)}
           ${row(pools.microbe.slice(0, 2), 'Мий мікробів!', 'Проведи пальцем — і в бульбашку', true)}
           ${row(pools.fruit.slice(0, 2), 'Збирай вітаміни!', 'Фрукти — у баночку', true)}
-          ${row(pools.cell.slice(0, 2), 'Своїх не чіпай!', `${friend} · зачепиш — раунд зупиниться`, false)}
+          ${row(pools.cell, 'Обережно, не розрізай!', `Знак «!» і димний слід — пропускай. ${friend}`, false)}
           ${row(pools.bonus, 'Лови бонуси!', 'Вони допомагають', true)}
           <div class="row">
             <button class="big-btn pop" data-act="${mode === 'start' ? 'intro-go' : 'menu'}">${mode === 'start' ? 'Грати!' : 'Добре'}</button>

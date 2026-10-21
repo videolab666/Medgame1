@@ -92,11 +92,22 @@ export const LOCATION_INFO = Object.freeze({
   skin: { name: 'Шкіра', icon: 'hat', hint: 'Шкіра — наш щит!' },
 });
 
-// Default pools. "cell" means any friendly character that must not be touched.
+// Only one recognizable friendly character per location should end a round.
+// Other friends remain available in the story and sticker collection.
+export const HAZARD_CHARACTER = Object.freeze({
+  hands: 'bilyk',
+  kitchen: 'bilyk',
+  blood: 'chervonya',
+  mouth: 'zubchyk',
+  tummy: 'dobryk',
+  skin: 'latochka',
+});
+
+// Default pools. "cell" is a friendly character that must not be sliced.
 export const TYPES = Object.freeze({
   microbe: ['chykhunchyk', 'brudnulya', 'lypuchka', 'kashlyuk'],
   fruit: ['orange', 'apple', 'kiwi', 'strawberry', 'broccoli'],
-  cell: ['chervonya', 'bilyk', 'latochka'],
+  cell: ['bilyk'],
   bonus: ['soap', 'vaccine', 'patch'],
 });
 
@@ -105,22 +116,23 @@ export const LOCATION_TYPES = Object.freeze({
   mouth: {
     microbe: ['kysliuk', 'lypuchka', 'brudnulya'],
     fruit: ['apple', 'carrot', 'strawberry'],
-    cell: ['zubchyk'],
     bonus: ['toothbrush', 'vaccine', 'patch'],
   },
   tummy: {
     microbe: ['brudnulya', 'kashlyuk', 'chykhunchyk'],
     fruit: ['banana', 'broccoli', 'kiwi', 'apple'],
-    cell: ['dobryk'],
   },
   skin: {
     microbe: ['brudnulya', 'chykhunchyk', 'lypuchka'],
     fruit: ['orange', 'strawberry', 'kiwi'],
-    cell: ['latochka', 'bilyk'],
   },
 });
 
-export const typesFor = (location) => ({ ...TYPES, ...(LOCATION_TYPES[location] ?? {}) });
+export const typesFor = (location) => ({
+  ...TYPES,
+  ...(LOCATION_TYPES[location] ?? {}),
+  cell: [HAZARD_CHARACTER[location] ?? TYPES.cell[0]],
+});
 
 // What each bonus does in the round logic.
 export const BONUS_EFFECT = Object.freeze({

@@ -1,6 +1,6 @@
 // Display object for one game entity: body + blinking eyes, squash & stretch
 // idle motion, springy entrance.
-import { Container, Sprite } from 'pixi.js';
+import { Container, Graphics, Sprite, Text } from 'pixi.js';
 import gsap from 'gsap';
 import { haloTexture } from './textures.js';
 
@@ -11,6 +11,38 @@ export function createEntityView(e, art, bubbleTex = null) {
   const inner = new Container();
   container.addChild(inner);
   const size = 200 * (e.r / 75);
+
+  // A gentle, universally recognizable warning: amber outline and a large !.
+  // It avoids bombs/fuses and flashing imagery in the children's hospital.
+  let hazardHalo = null;
+  let hazardRing = null;
+  let hazardBadge = null;
+  if (e.kind === 'cell') {
+    hazardHalo = new Sprite(haloTexture());
+    hazardHalo.anchor.set(0.5);
+    hazardHalo.width = hazardHalo.height = size * 1.8;
+    hazardHalo.tint = 0xffb347;
+    hazardHalo.alpha = 0.32;
+    container.addChildAt(hazardHalo, 0);
+
+    hazardRing = new Graphics()
+      .circle(0, 0, size * 0.59).stroke({ width: 10, color: 0xffa31b, alpha: 0.96 })
+      .circle(0, 0, size * 0.64).stroke({ width: 4, color: 0xffffff, alpha: 0.95 });
+    container.addChildAt(hazardRing, 1);
+
+    hazardBadge = new Container();
+    const backing = new Graphics().circle(0, 0, 30).fill(0xffb63c)
+      .circle(0, 0, 30).stroke({ width: 6, color: 0xffffff });
+    const mark = new Text({
+      text: '!',
+      style: { fontFamily: 'Nunito, sans-serif', fontWeight: '900', fontSize: 49, fill: 0x473049 },
+    });
+    mark.anchor.set(0.5);
+    mark.y = -2;
+    hazardBadge.addChild(backing, mark);
+    hazardBadge.position.set(size * 0.44, -size * 0.47);
+    container.addChild(hazardBadge);
+  }
 
   if (e.kind === 'bonus' || e.kind === 'gold') {
     const halo = new Sprite(haloTexture());
@@ -73,6 +105,21 @@ export function createEntityView(e, art, bubbleTex = null) {
     hasBubble: !!bubble,
     update(ent, dt) {
       container.position.set(ent.x, ent.y);
+      if (hazardRing) {
+        // Once defused by the king, this friend is safe: all warning cues stop.
+        const active = !ent.defused;
+        hazardHalo.visible = active;
+        hazardRing.visible = active;
+        hazardBadge.visible = active;
+        if (active) {
+          // Slow pulse (~0.6 Hz), never strobe.
+          const pulse = Math.sin(ent.age * 4 + ent.phase);
+          hazardRing.scale.set(1 + pulse * 0.045);
+          hazardHalo.alpha = 0.28 + (pulse + 1) * 0.06;
+          hazardBadge.y = -size * 0.47 + Math.sin(ent.age * 3.2) * 5;
+          hazardBadge.scale.set(1 + pulse * 0.045);
+        }
+      }
       const t = ent.age * 6 + ent.phase;
       inner.scale.set(1 + Math.sin(t) * 0.04, 1 - Math.sin(t) * 0.04);
       inner.rotation = faced ? Math.sin(ent.age * 3 + ent.phase) * 0.22 : ent.rot;

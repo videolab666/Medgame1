@@ -85,6 +85,7 @@ let post = applyPost(stage, 'high');
 const views = new Map();
 let round = null;
 let background = null;
+let lastHazardChimeAt = -Infinity;
 let scene = 'title';
 let activeStory = null;
 let currentLoc = progress.lastUnlocked();
@@ -133,6 +134,7 @@ function teardown() {
 
 function startRound(loc, mode, { interactive = true, powerups = [] } = {}) {
   teardown();
+  lastHazardChimeAt = -Infinity;
   const tutorial = mode === 'play' && !progress.state.tutorialDone;
   // Rounds start short (40 s) and grow +5 s per completed round up to 60 s.
   const duration = mode === 'calm' ? CONFIG.ROUND_SEC : roundSeconds(progress.state.rounds[loc] ?? 0);
@@ -156,6 +158,11 @@ function startRound(loc, mode, { interactive = true, powerups = [] } = {}) {
     stage.layers.entities.addChild(v.container);
     v.update(e, 0);
     views.set(e.id, v);
+    if (e.kind === 'cell' && mode === 'play' && interactive
+      && round.state.time - lastHazardChimeAt >= 1.2) {
+      lastHazardChimeAt = round.state.time;
+      synth.warning();
+    }
   });
   round.on('remove', (e) => {
     const v = views.get(e.id);
@@ -493,7 +500,18 @@ stage.app.ticker.add((ticker) => {
       segs = [];
       acc -= CONFIG.STEP;
     }
-    for (const e of round.state.entities) views.get(e.id)?.update(e, dt);
+    for (const e of round.state.entities) {
+      views.get(e.id)?.update(e, dt);
+      // A few soft puffs per second behind each airborne forbidden friend.
+      // Suppressed in menu/calm, after defusing, and on pause.
+      if (scene === 'round' && round.interactive && e.kind === 'cell' && e.alive && !e.defused
+        && e.age - (e.lastWarningTrailAt ?? -Infinity) >= 0.1
+        && e.y > -100 && e.y < stage.height + 110) {
+        e.lastWarningTrailAt = e.age;
+        particles.emit('warningTrail', e.x - e.vx * 0.06, e.y - e.vy * 0.06,
+          { vx: e.vx, vy: e.vy });
+      }
+    }
     trail.setCombo(round.state.combo);
     if (scene === 'round' || scene === 'calm') {
       ui.updateHud({
