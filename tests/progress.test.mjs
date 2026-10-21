@@ -142,7 +142,7 @@ test('achievements are earned and marked new once', () => {
   const a = p.completeRound('hands', mulberry32(2), star);
   assert.deepEqual(
     a.achievements.map((x) => x.id).sort(),
-    ['combo5', 'noMiss', 'swift', 'allHearts'],
+    ['allHearts', 'combo5', 'noMiss', 'swift'],
   );
   assert.ok(a.achievements.every((x) => x.isNew));
   const b = p.completeRound('hands', mulberry32(3), star);
