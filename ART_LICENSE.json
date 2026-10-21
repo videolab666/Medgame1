@@ -219,9 +219,10 @@
     },
     {
       "key": "yuliya",
-      "origin": "author-supplied reference / AI-assisted illustration",
+      "origin": "original",
       "author": "Game author / OpenAI image generation",
-      "file": "public/characters/yuliya.webp"
+      "file": "public/characters/yuliya.webp",
+      "note": "AI-assisted original portrait made from image reference supplied by game author"
     }
   ]
 }
