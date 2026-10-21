@@ -1,5 +1,5 @@
 {
-  "note": "Every visual in the game is original vector art generated in code (src/render/art.js). No third-party images, no AI-generated images, no studio-style imitation.",
+  "note": "Most visuals are original code-generated SVGs. The Yuliya portrait is an AI-assisted illustration based on the author's supplied reference image.",
   "art": [
     {
       "key": "chykhunchyk",
@@ -216,6 +216,13 @@
       "origin": "original",
       "author": "Мильна Хвиля project (code-generated SVG)",
       "file": "src/render/art.js"
+    },
+    {
+      "key": "yuliya",
+      "origin": "original",
+      "author": "Game author / OpenAI image generation",
+      "file": "public/characters/yuliya.webp",
+      "note": "AI-assisted original portrait made from image reference supplied by game author"
     }
   ]
 }

@@ -144,6 +144,9 @@ button {
 .lives { position: absolute; top: calc(80px + var(--safe-top)); left: 14px; display: flex; gap: 3px; }
 .heart-img { width: 34px; height: 34px; transition: opacity 0.3s, filter 0.3s; }
 .heart-img.off { opacity: 0.32; filter: grayscale(1); }
+.lives { align-items: center; padding: 3px 10px 3px 4px; border-radius: 22px; background: rgba(255,255,255,.85); box-shadow: 0 3px 10px rgba(31,80,99,.15); }
+.lives-count { font-weight: 900; color: var(--magenta); font-size: 25px; line-height: 1; }
+.lives.low .lives-count { color: #b33f56; }
 .score { position: absolute; top: calc(10px + var(--safe-top)); left: 84px; display: flex; align-items: center; gap: 2px; }
 .score-img { width: 56px; height: 56px; }
 .score-n { font-weight: 900; font-size: 30px; color: var(--white); -webkit-text-stroke: 2px var(--teal); paint-order: stroke fill; }
@@ -473,3 +476,30 @@ button {
 }
 /* Keep the profile chip clear of the sound button in the top-right corner. */
 .screen.title .profile { align-self: flex-start; width: calc(100% - 64px); }
+
+/* Narrated adventure */
+.story-banner { display:flex; align-items:center; width:min(100%,380px); border-radius:20px; background:rgba(255,255,255,.94); box-shadow:var(--shadow); padding:7px 12px; gap:12px; }
+.story-banner-portrait { flex:0 0 68px; width:68px; height:74px; object-fit:cover; object-position:top; border-radius:14px; }
+.story-banner div { display:flex; flex-direction:column; gap:3px; font-size:14px; text-align:left; line-height:1.25; }
+.story-banner strong { color:#bc267e; font-size:17px; }
+.story-overlay { background:rgba(212,242,255,.82); }
+.card.story-card { margin:auto 0; width:min(100%,460px); gap:7px; padding:14px 16px; overflow:hidden; }
+.story-illustration { height:clamp(125px,34vh,275px); width:100%; overflow:hidden; background:linear-gradient(140deg,#d9f5ff,#fff3e4); border-radius:22px; }
+.story-portrait { width:100%; height:100%; object-fit:contain; object-position:center 18%; }
+.story-pal { width:100%; height:100%; object-fit:contain; padding:8px; }
+.story-card .story-place { margin:0; font-size:14px; color:var(--blue); font-weight:900; }
+.story-card h2 { font-size:clamp(22px,6vw,31px); line-height:1.1; }
+.story-dialogue { width:100%; background:#eef8ff; border:2px solid #b5e5fa; border-radius:20px; padding:12px 14px; text-align:left; }
+.story-dialogue b { font-size:17px; color:var(--magenta); }
+.story-dialogue p { font-size:clamp(17px,4.7vw,21px); font-weight:800; line-height:1.3; margin:4px 0 0; }
+.story-counter { margin:0; color:var(--blue); font-weight:900; font-size:14px; }
+.story-card .big-btn { min-height:55px; font-size:23px; }
+.story-card .link-btn { min-height:32px; font-size:15px; }
+.rest-yuliya { display:flex; align-items:center; gap:10px; background:#ecf9ff; padding:8px; border-radius:16px; font-weight:800; text-align:left; }
+.rest-portrait { width:76px; height:78px; object-fit:cover; object-position:top; border-radius:12px; }
+.calm-yuliya { display:flex; align-items:center; gap:12px; max-width:360px; padding:8px 12px; border-radius:18px; background:rgba(255,255,255,.9); font-weight:800; }
+.calm-portrait { width:60px; height:70px; border-radius:12px; object-fit:cover; object-position:top; }
+.story-atlas { display:flex; align-items:center; background:#eff9ff; border-radius:15px; gap:10px; padding:8px 12px; font-weight:800; }
+.story-atlas-portrait { width:54px; height:60px; object-fit:cover; object-position:top; border-radius:9px; }
+@media(max-height:620px) { .story-illustration { height:110px; } .card.story-card { gap:4px; padding:10px; } .story-dialogue { padding:7px 10px; } }
+@media(prefers-reduced-motion:reduce) { .story-card *, .story-banner * { animation:none !important; } }

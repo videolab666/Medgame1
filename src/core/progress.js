@@ -38,6 +38,7 @@ const defaults = () => ({
   muted: false,
   seenFacts: {},
   tutorialDone: false,
+  story: {}, // completed or skipped story scenes
   // Economy (economy.js): stars are earned by playing only.
   stars: 0,
   xp: 0,
@@ -95,6 +96,7 @@ export function createProgress(storage, { unlockAll = CONFIG.UNLOCK_ALL } = {}) 
         })),
         best: { ...base.best, ...loaded.best },
         achievements: { ...loaded.achievements },
+        story: { ...base.story, ...(loaded.story ?? {}) },
         trails: { ...base.trails, ...loaded.trails, owned: [...(loaded.trails?.owned ?? base.trails.owned)] },
         tasks: loaded.tasks?.active?.length
           ? { active: loaded.tasks.active.map((t) => ({ ...t })), next: loaded.tasks.next ?? ECONOMY.ACTIVE_TASKS }
@@ -231,6 +233,10 @@ export function createProgress(storage, { unlockAll = CONFIG.UNLOCK_ALL } = {}) 
       if (rest) state.sinceRest = 0;
       save();
       return { sticker: { ...s, isNew, count: state.stickers[s.id] }, unlocked, rest, best, achievements, economy };
+    },
+    hasSeenStory: (id) => Boolean(state.story[id]),
+    markStorySeen(id) {
+      if (!state.story[id]) { state.story[id] = true; save(); }
     },
     levelInfo: () => levelFromXp(state.xp),
     // A calm-mode session long enough to count (main decides) moves calm tasks.
