@@ -46,12 +46,16 @@ export const CONFIG = Object.freeze({
   // 13 %, mango 15 %, watermelon 21 %.
   RADIUS: 85,
   HIT_SCALE: 1.0,
+  // Sprite artwork is wider than its nominal physics circle; forgive near-edge cuts.
+  SLICE_HIT_SCALE: 1.18,
+  // A deliberate slower swipe is accepted after this cumulative travel.
+  SWIPE_MIN_DISTANCE: 30,
   // Highest throw: object centre at ~77 % of the screen height, lowest ~60 %
   // (measured 60–72 % on the reference); a full flight takes 2.13–2.42 s:
   // speed 10.1–11.5 under gravity 9.5.
   APEX_MAX: 0.77,
   AIRTIME_MAX: 2.42,
-  SWIPE_MIN_SPEED: 500,
+  SWIPE_MIN_SPEED: 220,
   SLOW_SEC: 4,
   SLOW_SCALE: 0.45,
   SHIELD_SEC: 5,
