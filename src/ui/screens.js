@@ -38,6 +38,8 @@ const TRAIL_PREVIEW = {
 };
 
 const img = (key, cls = '') => `<img class="${cls}" alt="" draggable="false" src="${svgDataUrl(fullSvg(key))}">`;
+const YULIYA_ART = `${import.meta.env.BASE_URL}characters/yuliya.webp`;
+const yuliya = (cls = '') => `<img class="${cls}" draggable="false" alt="Юлія, головна медсестра" src="${YULIYA_ART}">`;
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 export function createUI(root, { progress, onTap = () => {} }) {
@@ -120,6 +122,12 @@ export function createUI(root, { progress, onTap = () => {} }) {
             <div class="logo-chars">${img('chykhunchyk', 'float a')}${img('bilyk', 'float b')}${img('orange', 'float c')}</div>
             <h1>Мильна<br>Хвиля</h1>
           </div>
+          <div class="story-banner pop">${yuliya('story-banner-portrait')}
+            <div><strong>Юлія запрошує у пригоду!</strong>
+              <span>Атлас маленьких відкриттів · ${LOCATION_ORDER.filter((l) => progress.hasSeenStory('chapter:' + l)).length}/6 сторінок</span>
+              ${progress.hasSeenStory('finale') ? '<span>🏅 Друг маленьких відкриттів</span>' : ''}
+            </div>
+          </div>
           <button class="big-btn pop" data-act="play" data-arg="${next}">Грати<span class="btn-sub">${LOCATION_INFO[next].name} · раунд ${roundNo}</span></button>
           <div class="loc-row">${LOCATION_ORDER.map(locationCard).join('')}</div>
           <div class="row">
@@ -148,7 +156,7 @@ export function createUI(root, { progress, onTap = () => {} }) {
       hud.className = 'hud';
       hud.innerHTML = `
         <svg class="timer" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" class="track"/><circle cx="32" cy="32" r="26" class="bar"/></svg>
-        <div class="lives">${Array.from({ length: maxLives }, () => img('heart', 'heart-img')).join('')}</div>
+        <div class="lives">${img('heart', 'heart-img')}<span class="lives-count">×${maxLives}</span></div>
         <div class="pu-row">${pu}</div>
         <div class="score">${img('bubble', 'score-img')}<span class="score-n">0</span></div>
         <div class="jar">${img('jar', 'jar-img')}<span class="jar-n">0</span></div>
@@ -174,11 +182,11 @@ export function createUI(root, { progress, onTap = () => {} }) {
       if (!calm && lives != null && hud._lives !== lives) {
         const before = hud._lives ?? lives;
         hud._lives = lives;
-        const hearts = livesEl.querySelectorAll('.heart-img');
-        hearts.forEach((el, i) => el.classList.toggle('off', i >= lives));
+        const count = livesEl.querySelector('.lives-count');
+        count.textContent = '×' + lives;
+        livesEl.classList.toggle('low', lives <= 2);
         if (before !== lives) {
-          const el = hearts[lives < before ? lives : lives - 1];
-          if (el) gsap.fromTo(el, { scale: 1.45 }, { scale: 1, duration: 0.55, ease: 'elastic.out(1.1, 0.45)' });
+          gsap.fromTo(count, { scale: 1.35 }, { scale: 1, duration: 0.5, ease: 'elastic.out(1.1, 0.45)' });
         }
       }
       const n = hud.querySelector('.jar-n');
@@ -257,11 +265,8 @@ export function createUI(root, { progress, onTap = () => {} }) {
         ? `<div class="tasks-done pop">${economy.tasksDone.map((t) => `<span>🎯 ${esc(t.text)} <b>+${t.reward} ⭐</b></span>`).join('')}</div>`
         : '';
       const a = ART[sticker.art];
-      const hearts = Array.from(
-        { length: CONFIG.MAX_LIVES + (summary.powerups?.includes('heart') ? 1 : 0) },
-        (_, i) => `<i class="heart ${i < summary.lives ? '' : 'off'}">❤️</i>`,
-      ).join('');
-      const record = best?.isRecord
+      const hearts = `❤️ ${summary.lives}/${CONFIG.MAX_LIVES + (summary.powerups?.includes('heart') ? 1 : 0)}`;
+            const record = best?.isRecord
         ? '<div class="record new pop">🏆 Новий рекорд!</div>'
         : best && best.value > 0
           ? `<div class="record pop">🏆 Рекорд: ${best.value}</div>`
@@ -305,6 +310,25 @@ export function createUI(root, { progress, onTap = () => {} }) {
     // "How to play" card: shown before the first round in each location and
     // from the title screen. Pictures carry the meaning for kids who can't read
     // yet; the characters are the ones of that location.
+    showStory(story, page = 0) {
+      hideHud();
+      const item = story.pages[page];
+      const actor = item.actor === 'yuliya' ? yuliya('story-portrait') : img('bilyk', 'story-pal');
+      const last = page === story.pages.length - 1;
+      mount(
+        `<div class="card story-card" role="dialog" aria-label="${esc(story.title)}">
+          <div class="story-illustration">${actor}</div>
+          <p class="story-place">${esc(story.place)}</p>
+          <h2>${esc(story.title)}</h2>
+          <div class="story-dialogue"><b>${esc(item.speaker)}</b><p>${esc(item.text)}</p></div>
+          <p class="story-counter">${page + 1} / ${story.pages.length}</p>
+          <div class="row"><button class="big-btn" data-act="story-next">${last ? 'Чудово!' : 'Далі →'}</button></div>
+          <button class="link-btn" data-act="story-skip">Пропустити</button>
+        </div>`,
+        'overlay story-overlay',
+      );
+    },
+
     showIntro(mode = 'start', loc = 'hands') {
       hideHud();
       const pools = typesFor(loc);
@@ -463,6 +487,7 @@ export function createUI(root, { progress, onTap = () => {} }) {
     showRest() {
       mount(
         `<div class="card rest">
+          <div class="rest-yuliya pop">${yuliya('rest-portrait')}<span>Юлія: «Чудова робота! Час трішки перепочити»</span></div>
           <div class="rest-chars pop">${img('bilyk', 'wave a')}${img('chervonya', 'wave b')}${img('latochka', 'wave c')}</div>
           <h2 class="pop">Чудова робота!</h2>
           <p class="pop">Перепочинь трішки 🙂<br>Випий води або обійми маму.</p>
@@ -506,6 +531,8 @@ export function createUI(root, { progress, onTap = () => {} }) {
           <div class="atlas-head"><button class="icon-btn" data-act="menu" aria-label="Назад">←</button><h2>Атлас тіла</h2></div>
           <div class="tabs">${tabs}</div>
           <div class="progress-line">Зібрано ${got} з ${STICKERS[loc].length}</div>
+          <div class="story-atlas">${yuliya('story-atlas-portrait')}<span>Сторінок пригоди: <b>${LOCATION_ORDER.filter((l) => progress.hasSeenStory('chapter:' + l)).length}/6</b>
+             ${progress.hasSeenStory('finale') ? '<br>🏅 Друг маленьких відкриттів' : ''}</span></div>
           <div class="grid">${items}</div>
           <div class="sticker-card hidden"></div>
         </div>`,
@@ -561,6 +588,7 @@ export function createUI(root, { progress, onTap = () => {} }) {
       hideHud();
       mount(
         `<div class="calm-wrap">
+          <div class="calm-yuliya">${yuliya('calm-portrait')}<span>Юлія поруч. Дихай повільно, як тобі зручно.</span></div>
           <div class="breath"><div class="ball"></div><span class="breath-text">Вдих…</span></div>
           <p class="calm-hint">Торкайся бульбашок і дихай повільно</p>
           <button class="mid-btn pop calm-exit" data-act="menu">Готово</button>
